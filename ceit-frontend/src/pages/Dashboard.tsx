@@ -32,6 +32,13 @@ const Dashboard: React.FC = () => {
   const [editImageUrl, setEditImageUrl] = useState('');
   const [editImagePreview, setEditImagePreview] = useState('');
   const [updating, setUpdating] = useState(false);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfCaption, setPdfCaption] = useState('');
+  const [uploadingPdf, setUploadingPdf] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [pdfThumbnail, setPdfThumbnail] = useState('');
+  const [pdfThumbnailPreview, setPdfThumbnailPreview] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
 
   useEffect(() => {
     fetchPosts();
@@ -219,6 +226,107 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handlePdfFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError('File size must be less than 10MB');
+        return;
+      }
+
+      // Check file type
+      if (file.type !== 'application/pdf') {
+        setUploadError('Please select a PDF file');
+        return;
+      }
+
+      setPdfFile(file);
+      
+      // Convert PDF to base64 for storage
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPdfUrl(base64String);
+        setUploadError('');
+      };
+      reader.onerror = () => {
+        setUploadError('Failed to read PDF file');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setUploadError('Thumbnail size must be less than 5MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        setUploadError('Thumbnail must be an image file');
+        return;
+      }
+
+      // Convert to base64
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setPdfThumbnail(base64String);
+        setPdfThumbnailPreview(base64String);
+        setUploadError('');
+      };
+      reader.onerror = () => {
+        setUploadError('Failed to read thumbnail file');
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handlePdfUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pdfFile || !pdfThumbnail) {
+      setUploadError('Please select both PDF file and thumbnail image');
+      return;
+    }
+
+    setUploadError('');
+    setUploadingPdf(true);
+
+    try {
+      // Store both PDF URL and thumbnail
+      // Format: pdfUrl|thumbnailBase64
+      const combinedData = `${pdfUrl}|${pdfThumbnail}`;
+      
+      await postsAPI.createPost({ 
+        caption: pdfCaption, 
+        imageUrl: combinedData
+      });
+      
+      // Reset form
+      setPdfCaption('');
+      setPdfFile(null);
+      setPdfThumbnail('');
+      setPdfThumbnailPreview('');
+      setPdfUrl('');
+      
+      alert('✅ Document uploaded successfully!');
+      
+      // Optionally switch to posts tab to see the result
+      setActiveTab('posts');
+      fetchPosts();
+    } catch (err: any) {
+      setUploadError(err.response?.data?.error || 'Failed to upload document');
+      console.error('Upload error:', err);
+    } finally {
+      setUploadingPdf(false);
+    }
+  };
+
   return (
     <div className="dashboard-layout">
       {/* Sidebar */}
@@ -246,13 +354,13 @@ const Dashboard: React.FC = () => {
           </button>
           
           <button 
-            className={`sidebar-item ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
+            className={`sidebar-item ${activeTab === 'uploadPdf' ? 'active' : ''}`}
+            onClick={() => setActiveTab('uploadPdf')}
           >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
             </svg>
-            <span>Users</span>
+            <span>Upload PDF</span>
           </button>
           
           <button 
@@ -310,23 +418,58 @@ const Dashboard: React.FC = () => {
                     </button>
                   </div>
                   <div className="posts-grid">
-                    {posts.map((post) => (
-                      <div key={post.id} className="post-card">
-                        <div className="post-body">
-                          <p className="post-title">{truncateText(post.caption, 150)}</p>
-                          {post.caption.length > 150 && (
-                            <button 
-                              className="read-more-btn"
-                              onClick={() => handleOpenCaptionModal(post.caption)}
-                            >
-                              Read more
-                            </button>
+                    {posts.map((post) => {
+                      // Detect if it's a PDF
+                      const isPDF = post.imageUrl?.includes('data:application/pdf') || 
+                                   post.imageUrl?.endsWith('.pdf') || 
+                                   post.imageUrl?.includes('|');
+                      const [pdfUrl, thumbnailUrl] = post.imageUrl?.includes('|') 
+                        ? post.imageUrl.split('|') 
+                        : [post.imageUrl, null];
+                      
+                      // Check if it's a valid base64 PDF or old mock URL
+                      const isValidPdf = isPDF && pdfUrl?.startsWith('data:application/pdf');
+                      const isOldMockUrl = isPDF && pdfUrl?.includes('example.com');
+                      
+                      return (
+                        <div key={post.id} className="post-card">
+                          <div className="post-body">
+                            <p className="post-title">{truncateText(post.caption, 150)}</p>
+                            {post.caption.length > 150 && (
+                              <button 
+                                className="read-more-btn"
+                                onClick={() => handleOpenCaptionModal(post.caption)}
+                              >
+                                Read more
+                              </button>
+                            )}
+                          </div>
+                          {post.imageUrl && (
+                            <div>
+                              {isPDF && thumbnailUrl && (
+                                <img src={thumbnailUrl} alt="PDF Thumbnail" className="post-image" />
+                              )}
+                              {isPDF && !thumbnailUrl && (
+                                <div style={{ padding: '20px', textAlign: 'center', background: '#f5f5f5', borderRadius: '8px' }}>
+                                  📄 PDF Document
+                                </div>
+                              )}
+                              {!isPDF && (
+                                <img src={post.imageUrl} alt="Post" className="post-image" />
+                              )}
+                              {isValidPdf && (
+                                <div style={{ padding: '8px', background: '#e8f5e9', color: '#2e7d32', borderRadius: '4px', marginTop: '8px', fontSize: '14px' }}>
+                                  ✅ PDF Ready to View
+                                </div>
+                              )}
+                              {isOldMockUrl && (
+                                <div style={{ padding: '8px', background: '#ffebee', color: '#c62828', borderRadius: '4px', marginTop: '8px', fontSize: '14px', border: '1px solid #ef9a9a' }}>
+                                  ⚠️ Old PDF - Please Delete and Re-upload
+                                </div>
+                              )}
+                            </div>
                           )}
-                        </div>
-                        {post.imageUrl && (
-                          <img src={post.imageUrl} alt="Post" className="post-image" />
-                        )}
-                        <div className="post-footer">
+                          <div className="post-footer">
                           <span className="post-date">
                             {new Date(post.createdAt).toLocaleDateString('en-US', {
                               month: 'short',
@@ -352,7 +495,8 @@ const Dashboard: React.FC = () => {
                           )}
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </>
               )}
@@ -365,8 +509,8 @@ const Dashboard: React.FC = () => {
                 src={`http://localhost:3000/calendar.html?token=${token}`}
                 title="Events Calendar"
                 style={{
-                  width: '100%',
-                  height: 'calc(100vh - 100px)',
+                  width: '70%',
+                  height: '850px',
                   border: 'none',
                   borderRadius: '8px'
                 }}
@@ -374,10 +518,113 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'users' && (
-            <div className="page-content">
-              <h2>Users</h2>
-              <p>User management coming soon</p>
+          {activeTab === 'uploadPdf' && (
+            <div className="page-content upload-pdf-content">
+              <div className="upload-pdf-section">
+                <h2>📄 Upload PDF Document</h2>
+                <p className="section-description">Upload PDF documents to share with your department</p>
+                
+                <form onSubmit={handlePdfUpload} className="pdf-upload-form">
+                  <div className="form-group">
+                    <label>Document Caption *</label>
+                    <textarea
+                      value={pdfCaption}
+                      onChange={(e) => setPdfCaption(e.target.value)}
+                      required
+                      rows={4}
+                      placeholder="Enter a description for this document..."
+                    />
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>PDF File *</label>
+                    <div className="file-input-wrapper">
+                      <input
+                        type="file"
+                        accept=".pdf,application/pdf"
+                        onChange={handlePdfFileChange}
+                        required
+                        id="pdf-file-input"
+                        className="file-input"
+                      />
+                      <label htmlFor="pdf-file-input" className="file-input-label">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                          <polyline points="17 8 12 3 7 8"></polyline>
+                          <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>{pdfFile ? pdfFile.name : 'Choose PDF File'}</span>
+                      </label>
+                    </div>
+                    {pdfFile && (
+                      <div className="file-info">
+                        <span className="file-icon">📄</span>
+                        <span className="file-name">{pdfFile.name}</span>
+                        <span className="file-size">({(pdfFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfFile(null);
+                            setPdfUrl('');
+                          }}
+                          className="remove-file-btn"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>Thumbnail Image *</label>
+                    <div className="file-input-wrapper">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleThumbnailChange}
+                        required
+                        id="thumbnail-input"
+                        className="file-input"
+                      />
+                      <label htmlFor="thumbnail-input" className="file-input-label">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                          <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <span>{pdfThumbnailPreview ? 'Change Thumbnail' : 'Choose Thumbnail Image'}</span>
+                      </label>
+                    </div>
+                    {pdfThumbnailPreview && (
+                      <div className="thumbnail-preview">
+                        <img src={pdfThumbnailPreview} alt="Thumbnail preview" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPdfThumbnail('');
+                            setPdfThumbnailPreview('');
+                          }}
+                          className="remove-thumbnail-btn"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {uploadError && <div className="error">{uploadError}</div>}
+                  
+                  <div className="form-actions">
+                    <button 
+                      type="submit" 
+                      disabled={uploadingPdf || !pdfFile || !pdfThumbnail}
+                      className="upload-btn"
+                    >
+                      {uploadingPdf ? '📤 Uploading...' : '📤 Upload Document'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

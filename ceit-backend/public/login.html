@@ -234,9 +234,9 @@
 
                 showSuccess('Login successful! Redirecting...');
 
-                // Redirect to calendar or dashboard
+                // Redirect to viewer, calendar, or specified page
                 setTimeout(() => {
-                    const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/calendar.html';
+                    const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/viewer.html';
                     window.location.href = redirectUrl;
                 }, 1000);
 
@@ -250,7 +250,9 @@
         // Check if already logged in
         const token = localStorage.getItem('token');
         if (token) {
-            window.location.href = '/calendar.html';
+            // Check if there's a redirect parameter, otherwise go to viewer
+            const redirectUrl = new URLSearchParams(window.location.search).get('redirect') || '/viewer.html';
+            window.location.href = redirectUrl;
         }
     </script>
 </body>

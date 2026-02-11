@@ -76,6 +76,214 @@
             cursor: pointer;
         }
 
+        .tabs {
+            background: white;
+            padding: 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: white;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: #f5f5f5;
+        }
+
+        .tab.active {
+            background: #f5f5f5;
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .posts-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .posts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .upload-form {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: white;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .file-input-button:hover {
+            background: #f5f5ff;
+            border-color: #5568d3;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            color: #2e7d32;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .submit-btn {
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .post-item {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            transition: box-shadow 0.2s;
+        }
+
+        .post-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .post-caption {
+            color: #333;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .pdf-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
         .calendar-container {
             background: white;
             border-radius: 12px;
@@ -392,10 +600,17 @@
 <body>
     <div class="container">
         <header>
-            <h1>📅 Events & Announcements Calendar</h1>
-            <p>Manage events and announcements for all departments</p>
+            <h1>📅 Admin Dashboard</h1>
+            <p>Manage events, announcements, and documents for all departments</p>
         </header>
 
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('events')">📅 Events Calendar</button>
+            <button class="tab" onclick="switchTab('documents')">📄 Documents & Posts</button>
+        </div>
+
+        <!-- Events Tab -->
+        <div id="eventsTab" class="tab-content active">
         <div class="controls">
             <button onclick="openAddEventModal()">➕ Add New Event</button>
             <button onclick="loadEvents()">🔄 Refresh</button>
@@ -436,6 +651,81 @@
                 <!-- Calendar will be generated here -->
             </div>
         </div>
+        </div>
+        <!-- End Events Tab -->
+
+        <!-- Documents Tab -->
+        <div id="documentsTab" class="tab-content">
+            <div class="posts-section">
+                <div class="posts-header">
+                    <h2>📄 Upload Document</h2>
+                </div>
+                
+                <form id="uploadForm" class="upload-form" onsubmit="handleDocumentUpload(event)">
+                    <div class="form-group">
+                        <label class="form-label">Document Caption *</label>
+                        <textarea 
+                            id="documentCaption" 
+                            class="form-textarea" 
+                            placeholder="Enter a description or caption for this document..."
+                            required
+                        ></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">PDF Document *</label>
+                        <div class="file-input-wrapper">
+                            <input 
+                                type="file" 
+                                id="pdfFile" 
+                                class="file-input" 
+                                accept=".pdf,application/pdf"
+                                onchange="handleFileSelect(event)"
+                                required
+                            />
+                            <label for="pdfFile" class="file-input-button">
+                                <span>📎</span>
+                                <span>Choose PDF File</span>
+                            </label>
+                        </div>
+                        <div id="fileInfo" class="file-info"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Thumbnail Image *</label>
+                        <div class="file-input-wrapper">
+                            <input 
+                                type="file" 
+                                id="thumbnailFile" 
+                                class="file-input" 
+                                accept="image/*"
+                                onchange="handleThumbnailSelect(event)"
+                                required
+                            />
+                            <label for="thumbnailFile" class="file-input-button">
+                                <span>🖼️</span>
+                                <span>Choose Thumbnail Image</span>
+                            </label>
+                        </div>
+                        <div id="thumbnailPreview" class="thumbnail-preview-container" style="display: none;">
+                            <img id="thumbnailImage" src="" alt="Thumbnail preview" style="max-width: 200px; border-radius: 8px; margin-top: 10px;" />
+                        </div>
+                    </div>
+                    <button type="submit" class="submit-btn" id="submitBtn">
+                        📤 Upload Document
+                    </button>
+                </form>
+            </div>
+
+            <div class="posts-section">
+                <div class="posts-header">
+                    <h2>📋 Your Department's Posts</h2>
+                    <button class="btn btn-primary" onclick="loadDepartmentPosts()">🔄 Refresh</button>
+                </div>
+                <div id="postsList" class="posts-list">
+                    <!-- Posts will be loaded here -->
+                </div>
+            </div>
+        </div>
+        <!-- End Documents Tab -->
     </div>
 
     <!-- Add Event Modal -->
@@ -854,7 +1144,278 @@
         document.addEventListener('DOMContentLoaded', () => {
             renderCalendar();
             loadEvents();
+            loadDepartmentPosts();
         });
+
+        // Tab switching functionality
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            if (tabName === 'events') {
+                document.getElementById('eventsTab').classList.add('active');
+            } else if (tabName === 'documents') {
+                document.getElementById('documentsTab').classList.add('active');
+                loadDepartmentPosts();
+            }
+        }
+
+        // Document upload functionality
+        let selectedFile = null;
+        let thumbnailBase64 = null;
+        let pdfUrl = null;
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            selectedFile = file;
+            
+            if (file) {
+                // Check file type
+                if (file.type !== 'application/pdf') {
+                    alert('Please select a PDF file');
+                    return;
+                }
+
+                // Check file size (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('PDF size must be less than 10MB');
+                    return;
+                }
+
+                const fileInfo = document.getElementById('fileInfo');
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                fileInfo.innerHTML = `✅ Selected: <strong>${file.name}</strong> (${fileSizeMB} MB) - PDF`;
+                fileInfo.classList.add('show');
+                
+                // Convert PDF to base64
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    pdfUrl = reader.result;
+                };
+                reader.onerror = () => {
+                    alert('Failed to read PDF file');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleThumbnailSelect(event) {
+            const file = event.target.files[0];
+            
+            if (file) {
+                // Check file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file for thumbnail');
+                    return;
+                }
+
+                // Check file size (max 5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Thumbnail size must be less than 5MB');
+                    return;
+                }
+
+                // Convert to base64
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    thumbnailBase64 = reader.result;
+                    document.getElementById('thumbnailImage').src = thumbnailBase64;
+                    document.getElementById('thumbnailPreview').style.display = 'block';
+                };
+                reader.onerror = () => {
+                    alert('Failed to read thumbnail file');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function handleDocumentUpload(event) {
+            event.preventDefault();
+            
+            const caption = document.getElementById('documentCaption').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (!selectedFile) {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            if (!thumbnailBase64) {
+                alert('Please select a thumbnail image');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = '📤 Uploading...';
+
+            try {
+                // Combine PDF URL and thumbnail: pdfUrl|thumbnailBase64
+                const combinedData = `${pdfUrl}|${thumbnailBase64}`;
+                
+                const response = await fetch(`${API_URL}/posts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
+                    },
+                    body: JSON.stringify({
+                        caption: caption,
+                        imageUrl: combinedData
+                    })
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    const errorData = await response.json();
+                    alert(`Authentication error: ${errorData.error || 'Session expired. Please login again.'}`);
+                    localStorage.removeItem('token');
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Upload failed');
+                }
+
+                // Reset form
+                document.getElementById('uploadForm').reset();
+                document.getElementById('fileInfo').classList.remove('show');
+                document.getElementById('thumbnailPreview').style.display = 'none';
+                selectedFile = null;
+                thumbnailBase64 = null;
+                pdfUrl = null;
+                
+                alert('✅ Document uploaded successfully!');
+                loadDepartmentPosts();
+
+            } catch (error) {
+                console.error('Upload error:', error);
+                alert(`❌ Failed to upload document: ${error.message}`);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '📤 Upload Document';
+            }
+        }
+
+        async function loadDepartmentPosts() {
+            try {
+                const response = await fetch(`${API_URL}/posts`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load posts');
+                }
+
+                const posts = await response.json();
+                const postsList = document.getElementById('postsList');
+
+                if (posts.length === 0) {
+                    postsList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No posts yet. Upload your first document!</p>';
+                    return;
+                }
+
+                postsList.innerHTML = posts.map(post => {
+                    // Parse imageUrl - it might contain PDF URL and thumbnail separated by |
+                    let isPDF = false;
+                    let pdfUrl = '';
+                    let thumbnailUrl = '';
+                    let displayUrl = post.imageUrl;
+                    
+                    if (post.imageUrl) {
+                        if (post.imageUrl.includes('|')) {
+                            // New format: pdfUrl|thumbnailBase64
+                            const parts = post.imageUrl.split('|');
+                            pdfUrl = parts[0];
+                            thumbnailUrl = parts[1];
+                            isPDF = true;
+                            displayUrl = pdfUrl;
+                        } else if (post.imageUrl.toLowerCase().endsWith('.pdf')) {
+                            // Legacy format
+                            isPDF = true;
+                            displayUrl = post.imageUrl;
+                        }
+                    }
+                    
+                    const isImage = post.imageUrl && !isPDF && !post.imageUrl.includes('|');
+                    
+                    // Check if it's a valid base64 PDF or old mock URL
+                    const isValidPdf = isPDF && pdfUrl.startsWith('data:application/pdf');
+                    const isOldMockUrl = isPDF && pdfUrl.includes('example.com');
+                    
+                    let fileIndicator = '';
+                    if (isValidPdf) {
+                        fileIndicator = '<span class="pdf-indicator">📄 PDF Document (Ready to View)</span>';
+                    } else if (isOldMockUrl) {
+                        fileIndicator = '<span class="pdf-indicator" style="background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;">⚠️ Old PDF - Please Re-upload</span>';
+                    } else if (isPDF) {
+                        fileIndicator = '<span class="pdf-indicator">📄 PDF Document</span>';
+                    } else if (isImage) {
+                        fileIndicator = '<span class="pdf-indicator">🖼️ Image</span>';
+                    }
+                    
+                    const thumbnailHtml = thumbnailUrl ? `<img src="${thumbnailUrl}" alt="Thumbnail" style="max-width: 150px; border-radius: 8px; margin-top: 10px; cursor: pointer;" onclick="window.open('${displayUrl}', '_blank')" />` : '';
+                    
+                    // Add proper link text based on file type
+                    const viewLinkText = isPDF ? '📄 View PDF' : '🔗 View File';
+                    
+                    return `
+                        <div class="post-item">
+                            <div class="post-caption">${post.caption}</div>
+                            ${thumbnailHtml}
+                            ${fileIndicator}
+                            <div class="post-meta">
+                                <span>${new Date(post.createdAt).toLocaleString()}</span>
+                                <div>
+                                    ${displayUrl ? `<a href="${displayUrl}" target="_blank" style="color: #667eea; text-decoration: none; margin-right: 10px;">${viewLinkText}</a>` : ''}
+                                    <button class="btn btn-secondary" style="padding: 4px 12px; font-size: 0.85rem;" onclick="deletePost('${post.id}')">🗑️ Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading posts:', error);
+                document.getElementById('postsList').innerHTML = '<p style="text-align: center; color: #c62828; padding: 40px;">Failed to load posts</p>';
+            }
+        }
+
+        async function deletePost(postId) {
+            if (!confirm('Are you sure you want to delete this post?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to delete post');
+                }
+
+                alert('✅ Post deleted successfully!');
+                loadDepartmentPosts();
+
+            } catch (error) {
+                console.error('Error deleting post:', error);
+                alert(`❌ Failed to delete post: ${error.message}`);
+            }
+        }
     </script>
 </body>
 </html>
