@@ -60,9 +60,9 @@ export const postsAPI = {
 export const eventsAPI = {
   getEvents: (params?: { startDate?: string; endDate?: string; allDepartments?: boolean }) =>
     api.get('/events', { params }),
-  createEvent: (data: { title: string; description?: string; eventDate: string; endDate?: string; location?: string }) =>
+  createEvent: (data: { title: string; description?: string; eventDate: string; endDate?: string; location?: string; eventImageUrl?: string; eventLink?: string }) =>
     api.post('/events', data),
-  updateEvent: (id: string, data: { title?: string; description?: string; eventDate?: string; endDate?: string; location?: string }) =>
+  updateEvent: (id: string, data: { title?: string; description?: string; eventDate?: string; endDate?: string; location?: string; eventImageUrl?: string | null; eventLink?: string | null }) =>
     api.put(`/events/${id}`, data),
   deleteEvent: (id: string) => api.delete(`/events/${id}`),
 };

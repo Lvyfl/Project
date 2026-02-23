@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CvSU CEIT Faculty Connect</title>
+    <link rel="stylesheet" href="css/viewer.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo-section">
+            <div class="logo-icon">🎓</div>
+            <div class="logo-text">CvSU</div>
+            <div class="logo-subtitle">FACULTY CONNECT</div>
+        </div>
+        
+        <div class="nav-menu">
+            <div class="nav-item active">
+                <span class="nav-icon">🏠</span>
+                <span>Home</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">👥</span>
+                <span>Faculty</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">📅</span>
+                <span>Events</span>
+            </div>
+            <div class="nav-item">
+                <span class="nav-icon">💬</span>
+                <span>Messages</span>
+            </div>
+        </div>
+
+        <div class="user-menu">
+            <div id="loginPrompt" class="login-prompt show">
+                <a href="/login.html" class="login-link">🔐 Admin Login</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Content Area -->
+        <div class="content-area">
+            <div class="page-header">
+                <h1 class="page-title">
+                    📢 Recent Announcements
+                </h1>
+                <div class="filter-dropdown">
+                    <button class="filter-btn" onclick="toggleFilter()">
+                        <span>Filter</span>
+                        <span>📋</span>
+                    </button>
+                    <div id="filterDropdown" class="filter-content">
+                        <div class="filter-option" onclick="filterByDepartment('')">All Departments</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="loading" class="loading" style="display: none;">
+                Loading announcements...
+            </div>
+
+            <div id="error" class="error" style="display: none;"></div>
+
+            <div id="postsContainer" class="posts-feed">
+                <!-- Posts will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Calendar Sidebar -->
+        <div class="calendar-sidebar">
+            <div class="calendar-card">
+                <h2 class="calendar-title">Events Calendar</h2>
+                <div class="calendar-header">
+                    <button class="calendar-nav" onclick="changeMonth(-1)">‹</button>
+                    <span class="calendar-month" id="calendarMonth">February 2026</span>
+                    <button class="calendar-nav" onclick="changeMonth(1)">›</button>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Calendar will be generated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Viewer Modal -->
+    <div id="pdfModal" class="pdf-modal">
+        <div class="pdf-modal-content">
+            <div class="pdf-modal-header">
+                <div class="pdf-modal-title" id="pdfTitle">PDF Document</div>
+                <div class="pdf-modal-actions">
+                    <button class="pdf-download-btn" id="pdfDownloadBtn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download
+                    </button>
+                    <button class="pdf-close-btn" onclick="closePdfViewer()">×</button>
+                </div>
+            </div>
+            <div class="pdf-viewer-container" id="pdfViewerContainer">
+                <!-- PDF will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeImageViewer()">
+        <div class="image-modal-content" onclick="event.stopPropagation()">
+            <button class="image-modal-close" onclick="closeImageViewer()">×</button>
+            <img id="imageModalImg" class="image-modal-img" src="" alt="Image preview" />
+        </div>
+    </div>
+
+    <script src="js/viewer.js"></script>
+</body>
+</html>

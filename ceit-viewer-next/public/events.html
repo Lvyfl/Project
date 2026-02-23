@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CEIT Viewer - Events</title>
+  <link rel="stylesheet" href="css/viewer.css" />
+  <link rel="stylesheet" href="css/events.css" />
+</head>
+<body>
+  <div class="sidebar">
+    <div class="logo-section">
+      <div class="logo-icon">🎓</div>
+      <div class="logo-text">CvSU</div>
+      <div class="logo-subtitle">CEIT Achievements Hub</div>
+    </div>
+
+    <div class="nav-menu">
+      <div class="nav-item" onclick="window.location.href='viewer.html'">
+        <span class="nav-icon">🏠</span>
+        <span>Home</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">👥</span>
+        <span>Faculty</span>
+      </div>
+      <div class="nav-item active">
+        <span class="nav-icon">📅</span>
+        <span>Events</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div class="events-content">
+      <div class="header-row">
+        <h1>📅 Events Showcase</h1>
+        <div class="actions">
+          <button class="btn" onclick="window.location.href='viewer.html'">← Back to Home</button>
+          <button class="btn" onclick="loadEvents()">Refresh</button>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label for="departmentFilter">Department</label>
+        <select id="departmentFilter" onchange="loadEvents()">
+          <option value="">All Departments</option>
+        </select>
+      </div>
+
+      <div id="loading" class="loading">Loading events...</div>
+      <div id="error" class="error"></div>
+      <div id="eventsGrid" class="events-grid"></div>
+    </div>
+  </div>
+
+  <script src="js/events.js"></script>
+</body>
+</html>

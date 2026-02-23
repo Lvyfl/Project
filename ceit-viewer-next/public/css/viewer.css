@@ -1,0 +1,862 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #2d1400 0%, #1a0a00 50%,  #000000 100%);
+    min-height: 100vh;
+    display: flex;
+    color: #e5e5e5;
+    overflow-x: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.logo-section {
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 30px;
+}
+
+.logo-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    border-radius: 12px;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    box-shadow: 0 12px 30px rgba(249, 115, 22, 0.25);
+}
+
+.logo-text {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 5px;
+}
+
+.logo-subtitle {
+    font-size: 0.85rem;
+    color: rgba(249, 115, 22, 0.7);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.nav-menu {
+    flex: 1;
+    padding: 0 15px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.72);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+}
+
+.nav-item:hover {
+    background: rgba(249, 115, 22, 0.12);
+    color: white;
+}
+
+.nav-item.active {
+    background: linear-gradient(90deg, rgba(234, 88, 12, 1) 0%, rgba(194, 65, 12, 1) 100%);
+    color: white;
+    box-shadow: 0 10px 24px rgba(234, 88, 12, 0.25);
+}
+
+.nav-icon {
+    font-size: 1.2rem;
+}
+
+/* Main Container */
+.main-container {
+    margin-left: 260px;
+    flex: 1;
+    display: flex;
+    padding: 28px;
+    gap: 20px;
+}
+
+/* Content Area */
+.content-area {
+    flex: 1;
+    max-width: 880px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.page-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.filter-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.2s;
+    color: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+.filter-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.filter-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(16px);
+    min-width: 200px;
+    box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    border-radius: 8px;
+    z-index: 1000;
+    margin-top: 5px;
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    color: rgba(255,255,255,0.9);
+}
+
+.filter-content.show {
+    display: block;
+}
+
+.filter-option {
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.filter-option:hover {
+    background: rgba(249, 115, 22, 0.12);
+}
+
+.filter-option:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.filter-option:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+/* Posts Feed */
+.posts-feed {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.post-card {
+    background: rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(249, 115, 22, 0.12);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+    animation: fadeIn 0.3s ease;
+}
+
+.post-card:hover {
+    border-color: rgba(249, 115, 22, 0.28);
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.post-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.post-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.post-info {
+    flex: 1;
+}
+
+.post-author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 5px;
+}
+
+.author-name {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+.urgent-badge {
+    background: rgba(249, 115, 22, 0.18);
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    color: white;
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.post-meta {
+    font-size: 0.85rem;
+    color: rgba(156, 163, 175, 0.95);
+}
+
+.post-body {
+    margin-bottom: 15px;
+    line-height: 1.6;
+    color: rgba(229, 229, 229, 0.95);
+}
+
+.post-image {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin: 15px 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.post-attachment {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(249, 115, 22, 0.15);
+    border-radius: 6px;
+    margin: 10px 0;
+    color: rgba(249, 115, 22, 0.95);
+    font-size: 0.9rem;
+}
+
+.post-footer {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(249, 115, 22, 0.12);
+    color: rgba(156, 163, 175, 0.95);
+    font-size: 0.9rem;
+}
+
+.like-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.like-btn:hover {
+    color: rgba(249, 115, 22, 0.95);
+}
+
+/* Calendar Sidebar */
+.calendar-sidebar {
+    width: 420px;
+    position: sticky;
+    top: 20px;
+    align-self: flex-start;
+}
+
+.calendar-card {
+    background: rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(249, 115, 22, 0.12);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+}
+
+.calendar-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #ffffff;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.calendar-nav {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+    color: rgba(156, 163, 175, 0.9);
+}
+
+.calendar-nav:hover {
+    color: rgba(249, 115, 22, 0.95);
+}
+
+.calendar-month {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.calendar-actions {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.calendar-action-btn {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(249, 115, 22, 0.28);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.92);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+}
+
+.calendar-action-btn:hover {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.55);
+}
+
+.calendar-day-header {
+    text-align: center;
+    font-size: 0.75rem;
+    color: rgba(156, 163, 175, 0.9);
+    font-weight: 600;
+    padding: 8px 0;
+}
+
+.calendar-day {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    position: relative;
+    padding: 6px 4px;
+    z-index: 1;
+}
+
+.calendar-day:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.calendar-day.has-event {
+    background: rgba(249, 115, 22, 0.14);
+    color: rgba(249, 115, 22, 0.95);
+    font-weight: 600;
+}
+
+.calendar-day.today {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    font-weight: 600;
+}
+
+.event-count {
+    font-size: 0.6rem;
+    color: rgba(249, 115, 22, 0.95);
+    margin-top: 3px;
+    text-align: center;
+    white-space: nowrap;
+    text-transform: uppercase;
+}
+
+.calendar-day.today .event-count {
+    color: white;
+}
+
+.day-hover-card {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-50%);
+    min-width: 180px;
+    max-width: 240px;
+    background: rgba(0, 0, 0, 0.88);
+    border: 1px solid rgba(249, 115, 22, 0.35);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.4);
+    display: none;
+    z-index: 30;
+    text-align: left;
+}
+
+.day-hover-card::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: rgba(249, 115, 22, 0.35) transparent transparent transparent;
+}
+
+.calendar-day.has-event:hover {
+    z-index: 20;
+}
+
+.calendar-day.has-event:hover .day-hover-card {
+    display: block;
+}
+
+.day-hover-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    color: rgba(249, 115, 22, 0.95);
+    margin-bottom: 6px;
+}
+
+.day-hover-item {
+    font-size: 0.76rem;
+    color: rgba(255, 255, 255, 0.92);
+    line-height: 1.35;
+    margin-bottom: 4px;
+}
+
+.day-hover-item:last-child {
+    margin-bottom: 0;
+}
+
+.upcoming-card {
+    background: rgba(0, 0, 0, 0.32);
+    backdrop-filter: blur(14px);
+    border-radius: 16px;
+    padding: 18px;
+    border: 1px solid rgba(249, 115, 22, 0.12);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+    margin-top: 14px;
+}
+
+.upcoming-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 12px;
+}
+
+.upcoming-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.upcoming-item {
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.upcoming-item:hover {
+    border-color: rgba(249, 115, 22, 0.45);
+    background: rgba(249, 115, 22, 0.12);
+}
+
+.upcoming-item-title {
+    font-size: 0.85rem;
+    color: white;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.upcoming-item-meta {
+    font-size: 0.75rem;
+    color: rgba(156, 163, 175, 0.95);
+    line-height: 1.35;
+}
+
+.upcoming-empty {
+    font-size: 0.85rem;
+    color: rgba(156, 163, 175, 0.95);
+    text-align: center;
+    padding: 12px;
+}
+
+.loading, .error {
+    text-align: center;
+    padding: 40px 20px;
+    background: rgba(0, 0, 0, 0.32);
+    border-radius: 16px;
+    margin: 20px 0;
+    border: 1px solid rgba(249, 115, 22, 0.12);
+    backdrop-filter: blur(14px);
+}
+
+.loading {
+    color: rgba(156, 163, 175, 0.95);
+}
+
+.error {
+    background: rgba(239, 68, 68, 0.12);
+    color: rgba(248, 113, 113, 0.95);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.no-posts {
+    text-align: center;
+    padding: 60px 20px;
+    background: rgba(0, 0, 0, 0.32);
+    border-radius: 16px;
+    color: rgba(156, 163, 175, 0.95);
+    border: 1px solid rgba(249, 115, 22, 0.12);
+    backdrop-filter: blur(14px);
+}
+
+/* User Menu */
+.user-menu {
+    padding: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: auto;
+}
+
+.login-prompt {
+    display: none;
+    padding: 10px;
+    text-align: center;
+}
+
+.login-prompt.show {
+    display: block;
+}
+
+.login-link {
+    color: rgba(249, 115, 22, 0.95);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 8px 16px;
+    border: 1px solid rgba(249, 115, 22, 0.55);
+    border-radius: 6px;
+    display: inline-block;
+    transition: all 0.2s;
+}
+
+.login-link:hover {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+}
+
+@media (max-width: 1200px) {
+    .calendar-sidebar {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+    
+    .main-container {
+        margin-left: 0;
+    }
+}
+
+/* PDF Viewer Modal */
+.pdf-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(10px);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-modal.show {
+    display: flex;
+}
+
+.pdf-modal-content {
+    width: 90%;
+    height: 90%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(16px);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(249, 115, 22, 0.2);
+}
+
+.pdf-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(16px);
+    color: white;
+    border-bottom: 1px solid rgba(249, 115, 22, 0.12);
+}
+
+.pdf-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.pdf-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.pdf-download-btn {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pdf-download-btn:hover {
+    filter: brightness(1.05);
+}
+
+.pdf-close-btn {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.pdf-close-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.pdf-viewer-container {
+    flex: 1;
+    background: rgba(17, 17, 17, 0.95);
+    position: relative;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pdf-viewer-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.pdf-viewer-object {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.pdf-error-message {
+    color: white;
+    text-align: center;
+    padding: 40px;
+    font-size: 1.1rem;
+}
+
+.pdf-error-message a {
+    color: #ff5722;
+    text-decoration: underline;
+}
+
+/* PDF Thumbnail and Badge Styles */
+.pdf-thumbnail {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    border-radius: 12px;
+    margin: 15px 0;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.pdf-thumbnail:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+.pdf-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background: rgba(59, 130, 246, 0.12);
+    color: rgba(147, 197, 253, 1);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.pdf-badge:hover {
+    background: rgba(59, 130, 246, 0.18);
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.15);
+}
+
+/* Image Preview Modal */
+.image-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    z-index: 2100;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.image-modal.show {
+    display: flex;
+}
+
+.image-modal-content {
+    position: relative;
+    width: min(95vw, 1100px);
+    max-height: 90vh;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: rgba(0, 0, 0, 0.45);
+    color: white;
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 2;
+}
+
+.image-modal-close:hover {
+    background: rgba(249, 115, 22, 0.2);
+    border-color: rgba(249, 115, 22, 0.45);
+}
+
+.image-modal-img {
+    width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    display: block;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.pdf-badge span:first-child {
+    font-size: 1.2rem;
+}

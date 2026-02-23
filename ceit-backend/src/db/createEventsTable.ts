@@ -24,6 +24,8 @@ async function createEventsTable() {
         event_date timestamp NOT NULL,
         end_date timestamp,
         location varchar(255),
+        event_image_url text,
+        event_link text,
         created_at timestamp DEFAULT now() NOT NULL
       );
     `);

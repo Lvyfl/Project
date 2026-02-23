@@ -36,5 +36,7 @@ exports.events = (0, pg_core_1.pgTable)('events', {
     eventDate: (0, pg_core_1.timestamp)('event_date').notNull(),
     endDate: (0, pg_core_1.timestamp)('end_date'),
     location: (0, pg_core_1.varchar)('location', { length: 255 }),
+    eventImageUrl: (0, pg_core_1.text)('event_image_url'),
+    eventLink: (0, pg_core_1.text)('event_link'),
     createdAt: (0, pg_core_1.timestamp)('created_at').defaultNow().notNull(),
 });

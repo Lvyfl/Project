@@ -37,5 +37,7 @@ export const events = pgTable('events', {
   eventDate: timestamp('event_date').notNull(),
   endDate: timestamp('end_date'),
   location: varchar('location', { length: 255 }),
+  eventImageUrl: text('event_image_url'),
+  eventLink: text('event_link'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

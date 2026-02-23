@@ -3,26 +3,39 @@
 
 /* ====== Theme Variables ====== */
 :root, .dark {
-  --body-bg: linear-gradient(to bottom right, #000, #111827, #431407);
-  --text-base: white;
-  --scrollbar-thumb: rgba(249, 115, 22, 0.5);
-  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.8);
-  --select-bg: rgb(17, 24, 39);
-  --autofill-text: white;
-  --autofill-shadow: rgba(255, 255, 255, 0.1);
+  --body-bg:
+    radial-gradient(1000px circle at 12% 10%, rgba(249, 115, 22, 0.14), transparent 55%),
+    radial-gradient(900px circle at 88% 18%, rgba(249, 115, 22, 0.08), transparent 50%),
+    linear-gradient(135deg, #000000 0%, #111111 55%, #1a1a1a 100%);
+  --text-base: #ffffff;
+  --scrollbar-thumb: rgba(249, 115, 22, 0.4);
+  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.6);
+  --select-bg: #111111;
+  --autofill-text: #ffffff;
+  --autofill-shadow: rgba(0, 0, 0, 0.86);
+  --placeholder-text: rgba(255, 237, 213, 0.7);
 }
 
 .light {
   --body-bg:
-    radial-gradient(1200px circle at 15% 12%, rgba(249, 115, 22, 0.18), transparent 55%),
-    radial-gradient(900px circle at 85% 20%, rgba(249, 115, 22, 0.10), transparent 50%),
-    linear-gradient(135deg, #ffffff 0%, #fff7ed 55%, #f8fafc 100%);
-  --text-base: #1e293b;
+    radial-gradient(1200px circle at 15% 12%, rgba(249, 115, 22, 0.15), transparent 55%),
+    radial-gradient(900px circle at 85% 20%, rgba(249, 115, 22, 0.09), transparent 50%),
+    linear-gradient(135deg, #ffffff 0%, #fffaf5 55%, #fff5eb 100%);
+  --text-base: #111111;
   --scrollbar-thumb: rgba(249, 115, 22, 0.3);
-  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.6);
+  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.5);
   --select-bg: white;
-  --autofill-text: #1e293b;
-  --autofill-shadow: rgba(0, 0, 0, 0.05);
+  --autofill-text: #111111;
+  --autofill-shadow: rgba(255, 255, 255, 0.95);
+  --placeholder-text: rgba(194, 65, 12, 0.7);
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+.light {
+  color-scheme: light;
 }
 
 /* ====== Base styles ====== */
@@ -38,7 +51,7 @@ input, textarea, select {
 
 input::placeholder,
 textarea::placeholder {
-  color: rgb(156, 163, 175);
+  color: var(--placeholder-text);
 }
 
 /* Custom scrollbar */

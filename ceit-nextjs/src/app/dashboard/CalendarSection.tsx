@@ -12,10 +12,20 @@ interface CalendarEvent {
   eventDate: string;
   endDate?: string;
   location?: string;
+  eventImageUrl?: string;
+  eventLink?: string;
   adminName?: string;
   departmentName?: string;
   departmentId?: string;
 }
+
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 
 export default function CalendarSection() {
   const { theme } = useTheme();
@@ -26,14 +36,30 @@ export default function CalendarSection() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [newEvent, setNewEvent] = useState({ title: '', description: '', eventDate: '', endDate: '', location: '' });
+  const [newEvent, setNewEvent] = useState({
+    title: '',
+    description: '',
+    eventDate: '',
+    endDate: '',
+    location: '',
+    eventLink: '',
+    eventImageUrl: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [openMenuEventId, setOpenMenuEventId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editEventId, setEditEventId] = useState<string | null>(null);
-  const [editEvent, setEditEvent] = useState({ title: '', description: '', eventDate: '', endDate: '', location: '' });
+  const [editEvent, setEditEvent] = useState({
+    title: '',
+    description: '',
+    eventDate: '',
+    endDate: '',
+    location: '',
+    eventLink: '',
+    eventImageUrl: '',
+  });
 
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsEvent, setDetailsEvent] = useState<CalendarEvent | null>(null);
@@ -145,6 +171,12 @@ export default function CalendarSection() {
 
   const handleAddEvent = async () => {
     if (!newEvent.title || !newEvent.eventDate) return;
+
+    if (newEvent.eventLink && !/^https?:\/\//i.test(newEvent.eventLink)) {
+      alert('Event link must start with http:// or https://');
+      return;
+    }
+
     setSubmitting(true);
     try {
       await eventsAPI.createEvent({
@@ -153,9 +185,19 @@ export default function CalendarSection() {
         description: newEvent.description || undefined,
         endDate: newEvent.endDate || undefined,
         location: newEvent.location || undefined,
+        eventLink: newEvent.eventLink || undefined,
+        eventImageUrl: newEvent.eventImageUrl || undefined,
       });
       setShowAddModal(false);
-      setNewEvent({ title: '', description: '', eventDate: '', endDate: '', location: '' });
+      setNewEvent({
+        title: '',
+        description: '',
+        eventDate: '',
+        endDate: '',
+        location: '',
+        eventLink: '',
+        eventImageUrl: '',
+      });
       loadEvents();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create event');
@@ -181,12 +223,20 @@ export default function CalendarSection() {
       eventDate: toInputDateTime(event.eventDate),
       endDate: toInputDateTime(event.endDate),
       location: event.location || '',
+      eventLink: event.eventLink || '',
+      eventImageUrl: event.eventImageUrl || '',
     });
     setShowEditModal(true);
   };
 
   const handleUpdateEvent = async () => {
     if (!editEventId || !editEvent.title || !editEvent.eventDate) return;
+
+    if (editEvent.eventLink && !/^https?:\/\//i.test(editEvent.eventLink)) {
+      alert('Event link must start with http:// or https://');
+      return;
+    }
+
     const id = editEventId;
     setSubmitting(true);
     try {
@@ -195,6 +245,8 @@ export default function CalendarSection() {
         endDate: editEvent.endDate || undefined,
         description: editEvent.description || undefined,
         location: editEvent.location || undefined,
+        eventLink: editEvent.eventLink || undefined,
+        eventImageUrl: editEvent.eventImageUrl || undefined,
       };
       const res = await eventsAPI.updateEvent(id, payload);
       const updated: CalendarEvent = res.data;
@@ -582,6 +634,41 @@ export default function CalendarSection() {
                   placeholder="Event location"
                 />
               </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link</label>
+                <input
+                  type="url"
+                  value={newEvent.eventLink}
+                  onChange={e => setNewEvent(p => ({ ...p, eventLink: e.target.value }))}
+                  className={`w-full px-3 py-2 rounded-lg text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                  placeholder="https://youtube.com/..."
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith('image/')) {
+                      alert('Please select a valid image file.');
+                      return;
+                    }
+                    if (file.size > 3 * 1024 * 1024) {
+                      alert('Image must be less than 3MB.');
+                      return;
+                    }
+                    const dataUrl = await fileToDataUrl(file);
+                    setNewEvent(p => ({ ...p, eventImageUrl: dataUrl }));
+                  }}
+                  className={`w-full px-3 py-2 rounded-lg text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 ${d ? 'bg-white/10 border border-white/20 text-white file:bg-orange-500 file:text-white' : 'bg-gray-50 border border-gray-300 text-gray-900 file:bg-orange-500 file:text-white'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                />
+                {newEvent.eventImageUrl && (
+                  <img src={newEvent.eventImageUrl} alt="Event preview" className="mt-2 w-full h-28 object-cover rounded-lg border border-orange-500/30" />
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-5">
@@ -745,6 +832,41 @@ export default function CalendarSection() {
                   className={`w-full px-3 py-2 rounded-lg text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
                 />
               </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link</label>
+                <input
+                  type="url"
+                  value={editEvent.eventLink}
+                  onChange={e => setEditEvent(p => ({ ...p, eventLink: e.target.value }))}
+                  className={`w-full px-3 py-2 rounded-lg text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                  placeholder="https://youtube.com/..."
+                />
+              </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (!file.type.startsWith('image/')) {
+                      alert('Please select a valid image file.');
+                      return;
+                    }
+                    if (file.size > 3 * 1024 * 1024) {
+                      alert('Image must be less than 3MB.');
+                      return;
+                    }
+                    const dataUrl = await fileToDataUrl(file);
+                    setEditEvent(p => ({ ...p, eventImageUrl: dataUrl }));
+                  }}
+                  className={`w-full px-3 py-2 rounded-lg text-sm file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 ${d ? 'bg-white/10 border border-white/20 text-white file:bg-orange-500 file:text-white' : 'bg-gray-50 border border-gray-300 text-gray-900 file:bg-orange-500 file:text-white'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
+                />
+                {editEvent.eventImageUrl && (
+                  <img src={editEvent.eventImageUrl} alt="Event preview" className="mt-2 w-full h-28 object-cover rounded-lg border border-orange-500/30" />
+                )}
+              </div>
             </div>
 
             <div className="flex justify-end gap-3 mt-5">
@@ -834,6 +956,31 @@ export default function CalendarSection() {
                   {detailsEvent.description?.trim() ? detailsEvent.description : '—'}
                 </p>
               </div>
+
+              {detailsEvent.eventLink && (
+                <div className={`rounded-xl p-3 ${d ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                  <p className={`text-xs font-semibold ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link</p>
+                  <a
+                    href={detailsEvent.eventLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm mt-0.5 text-orange-500 hover:underline break-all"
+                  >
+                    {detailsEvent.eventLink}
+                  </a>
+                </div>
+              )}
+
+              {detailsEvent.eventImageUrl && (
+                <div className={`rounded-xl p-3 ${d ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
+                  <p className={`text-xs font-semibold mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Image</p>
+                  <img
+                    src={detailsEvent.eventImageUrl}
+                    alt={detailsEvent.title}
+                    className="w-full max-h-72 object-cover rounded-lg border border-orange-500/20"
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end mt-5">

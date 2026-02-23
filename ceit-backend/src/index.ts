@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import authRoutes from './routes/authRoutes';
 import postRoutes from './routes/postRoutes';
 import eventRoutes from './routes/eventRoutes';
@@ -18,6 +19,19 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Serve CEIT Viewer frontend files (supports env override + fallback)
+const configuredViewerPath = process.env.CEIT_VIEWER_FRONTEND_PATH
+  ? path.resolve(process.env.CEIT_VIEWER_FRONTEND_PATH)
+  : '';
+const externalViewerPath = path.resolve(__dirname, '../../ceit-viewer/ceit-viewer/frontend');
+const localViewerPath = path.join(__dirname, '../ceit-viewer/frontend');
+const viewerFrontendPath = configuredViewerPath && fs.existsSync(configuredViewerPath)
+  ? configuredViewerPath
+  : fs.existsSync(externalViewerPath)
+    ? externalViewerPath
+    : localViewerPath;
+app.use('/ceit-viewer', express.static(viewerFrontendPath));
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
