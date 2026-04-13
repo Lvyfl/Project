@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import PageHeader from '@/components/PageHeader';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -116,43 +117,6 @@ export default function ViewerPage() {
   const [postModalImageIndex, setPostModalImageIndex] = useState(0);
   const [isNavigatingModule, setIsNavigatingModule] = useState(false);
   const [bgImageUrl, setBgImageUrl] = useState('');
-  const [scrolled, setScrolled] = useState(false);
-
-useEffect(() => {
-  let expandTimer: ReturnType<typeof setTimeout> | null = null;
-  let lastY = window.scrollY;
-  let ticking = false;
-
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      const y = window.scrollY;
-      
-      if (y > 50) {
-        if (expandTimer) { clearTimeout(expandTimer); expandTimer = null; }
-        setScrolled(true);
-      } else if (y === 0) {
-        // ONLY expand at absolute zero — no exceptions
-        if (expandTimer) clearTimeout(expandTimer);
-        expandTimer = setTimeout(() => {
-          if (window.scrollY === 0) setScrolled(false);
-        }, 500);
-      }
-      // anything between 1px and 50px → do absolutely nothing
-
-      lastY = y;
-      ticking = false;
-    });
-  };
-
-  window.addEventListener('scroll', onScroll, { passive: true });
-  return () => {
-    window.removeEventListener('scroll', onScroll);
-    if (expandTimer) clearTimeout(expandTimer);
-  };
-}, []);
-  const filterRef = useRef<HTMLDivElement | null>(null);
 
   const startModuleNavigation = () => setIsNavigatingModule(true);
 
@@ -279,14 +243,6 @@ useEffect(() => {
   }, [loadEventsForMonth]);
 
   useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(event.target as Node)) setShowFilter(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    return () => document.removeEventListener('mousedown', onClick);
-  }, []);
-
-  useEffect(() => {
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { setImageModalSrc(''); setPostModal(null); }
     };
@@ -392,108 +348,21 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ── TICKER ── */}
-      <div className="sticky top-0 z-50 bg-[#E85D04] overflow-hidden py-[7px]">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 bg-[#0D0D0D] text-[#E85D04] px-3 h-[26px] flex items-center"
-            style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '11px', letterSpacing: '2px', fontWeight: 600 }}>
-            BREAKING
-          </div>
-          <div className="overflow-hidden flex-1">
-            <div className="ticker-scroll-track whitespace-nowrap inline-flex gap-16 text-white"
-              style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '12px', letterSpacing: '0.5px' }}>
-              {tickerItems.map((item, i) => (
-                <span key={i}>◆&nbsp;&nbsp;{item}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── MASTHEAD ── */}
-      <div className={`sticky top-[40px] z-30 border-b-4 border-[#E85D04] transition-shadow duration-300 ${scrolled ? 'shadow-xl' : ''} ${d ? 'bg-[#0D0D0D]' : 'bg-[#FAFAFA]'}`}>
-        <div className="max-w-[1280px] mx-auto px-6 md:px-10">
-          {/* Collapsible large title strip */}
-          <div
-            className={`overflow-hidden transition-all duration-300 ease-in-out ${
-              scrolled ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-[200px] opacity-100 pt-6 pb-4'
-            }`}
-          >
-            <div className="flex flex-col md:flex-row items-center md:items-end justify-between gap-4">
-            <div className={d ? 'text-[#888888]' : 'text-[#4A4A4A]'} style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '11px', letterSpacing: '1.5px', textTransform: 'uppercase', lineHeight: '1.8' }}>
-              {todayStr}<br />Cavite State University<br />CEIT Department
-            </div>
-            <div className="text-center flex-1">
-              <h1
-                style={{ fontFamily: "var(--font-playfair, 'Playfair Display', serif)", fontWeight: 900, lineHeight: 0.95, letterSpacing: '-2px',  fontSize: 'clamp(36px,7vw,74px)' }}
-                className={d ? 'text-white' : 'text-[#0D0D0D]'}>
-                CvSU CEIT <span className="text-[#E85D04]">BULLETIN</span>
-              </h1>
-              <div className={`mt-2 py-1 border-t border-b ${d ? 'border-[#2a2a2a]' : 'border-[#C4C4C4]'}`}
-                style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '11px', letterSpacing: '4px', color: d ? '#888888' : '#4A4A4A', textTransform: 'uppercase' }}>
-                Truth &nbsp;·&nbsp; Excellence &nbsp;·&nbsp; Service
-              </div>
-            </div>
-            </div>
-          </div>
-
-          {/* NAV */}
-          <nav className="bg-[#0D0D0D] -mx-6 md:-mx-10 px-6 md:px-10 relative">
-            <div className="max-w-[1280px] mx-auto flex flex-wrap items-center">
-              <a href="/viewer" style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase', padding: '12px 18px', textDecoration: 'none', display: 'block', color: '#E85D04', borderBottom: '3px solid #E85D04' }}>
-                Home
-              </a>
-              <Link onClick={startModuleNavigation} href="/events"
-                className="text-[#C4C4C4] hover:text-[#E85D04] border-b-[3px] border-transparent hover:border-[#E85D04] transition-all"
-                style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase', padding: '12px 18px', textDecoration: 'none', display: 'block' }}>
-                Events
-              </Link>
-              <Link onClick={startModuleNavigation} href="/documents"
-                className="text-[#C4C4C4] hover:text-[#E85D04] border-b-[3px] border-transparent hover:border-[#E85D04] transition-all"
-                style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase', padding: '12px 18px', textDecoration: 'none', display: 'block' }}>
-                Documents
-              </Link>
-              <div className="ml-auto flex items-center gap-2 relative" ref={filterRef}>
-                {/* Theme toggle */}
-                <div className="flex items-center border border-[#2a2a2a]">
-                  <button onClick={() => theme !== 'dark' && toggleTheme()}
-                    className={`px-3 py-[6px] font-semibold transition-all ${theme === 'dark' ? 'bg-[#E85D04] text-white' : 'text-[#C4C4C4] hover:text-[#E85D04]'}`}
-                    style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                    Dark
-                  </button>
-                  <button onClick={() => theme !== 'light' && toggleTheme()}
-                    className={`px-3 py-[6px] font-semibold transition-all ${theme === 'light' ? 'bg-[#E85D04] text-white' : 'text-[#C4C4C4] hover:text-[#E85D04]'}`}
-                    style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                    Light
-                  </button>
-                </div>
-                <button onClick={() => setShowFilter(v => !v)}
-                  className="flex items-center gap-2 text-[#C4C4C4] hover:text-[#E85D04] transition-colors border border-[#2a2a2a] hover:border-[#E85D04] py-[6px] px-3"
-                  style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '12px', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
-                  {currentFilter ? (departments.find(dep => dep.id === currentFilter)?.name ?? 'Filtered') : 'All Depts'}
-                  <span className="text-[10px]">▾</span>
-                </button>
-                {showFilter && (
-                  <div className="absolute top-full right-0 z-30 min-w-[200px] border border-[#2a2a2a] bg-[#0D0D0D] shadow-xl" style={{ marginTop: '1px' }}>
-                    <button onClick={() => { setCurrentFilter(''); setShowFilter(false); }}
-                      className="block w-full px-4 py-3 text-left text-[#C4C4C4] hover:text-[#E85D04] hover:bg-[rgba(232,93,4,0.1)] transition-colors"
-                      style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                      All Departments
-                    </button>
-                    {departments.map((dept) => (
-                      <button key={dept.id} onClick={() => { setCurrentFilter(dept.id); setShowFilter(false); }}
-                        className="block w-full px-4 py-3 text-left text-[#C4C4C4] hover:text-[#E85D04] hover:bg-[rgba(232,93,4,0.1)] transition-colors"
-                        style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                        {dept.name}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </nav>
-        </div>
-      </div>
+      {/* ── PAGE HEADER ── */}
+      <PageHeader
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onNavigate={startModuleNavigation}
+        currentPage="viewer"
+        departments={departments}
+        currentFilter={currentFilter}
+        onFilterChange={(deptId) => {
+          setCurrentFilter(deptId);
+          setShowFilter(false);
+        }}
+        showFilter={showFilter}
+        todayStr={todayStr}
+      />
 
       {/* ── PAGE ── */}
       <div className="relative z-10 max-w-[1280px] mx-auto px-6 md:px-10 py-8">

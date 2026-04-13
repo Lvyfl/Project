@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PdfThumbnail from './PdfThumbnail';
+import PageHeader from '@/components/PageHeader';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -88,60 +89,13 @@ export default function DocumentsPage() {
       className={`min-h-screen ${bg} ${textColor}`}
       style={{ fontFamily: "var(--font-baskerville, 'Libre Baskerville', Georgia, serif)" }}
     >
-      {/* ── HEADER ── */}
-      <header
-        className={`sticky top-0 z-40 w-full border-b px-5 py-3 shadow-xl backdrop-blur-xl lg:px-7 ${
-          d ? 'border-orange-500/15 bg-black/70 shadow-black/20' : 'border-orange-200 bg-white/85 shadow-orange-100/50'
-        }`}
-      >
-        <div className="mx-auto flex w-full max-w-[1200px] items-center justify-between">
-          <div>
-            <h1
-              className={`text-lg font-semibold lg:text-xl ${d ? 'text-white' : 'text-zinc-900'}`}
-              style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", letterSpacing: '2px', textTransform: 'uppercase' }}
-            >
-              Documents
-            </h1>
-            <p className={`text-sm ${d ? 'text-zinc-400' : 'text-zinc-600'}`}>
-              Published PDF files from CEIT
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className={`flex items-center rounded-xl p-1 ${d ? 'bg-black/30' : 'bg-orange-100/70'}`}>
-              <button
-                onClick={() => theme !== 'dark' && toggleTheme()}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all duration-200 ${
-                  theme === 'dark' ? 'bg-orange-600 text-white shadow-md' : 'text-zinc-600'
-                }`}
-                style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase' }}
-              >
-                Dark
-              </button>
-              <button
-                onClick={() => theme !== 'light' && toggleTheme()}
-                className={`px-3 py-1.5 rounded-lg font-semibold transition-all duration-200 ${
-                  theme === 'light' ? 'bg-orange-600 text-white shadow-md' : 'text-zinc-600'
-                }`}
-                style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase' }}
-              >
-                Light
-              </button>
-            </div>
-            <Link
-              onClick={startModuleNavigation}
-              href="/viewer"
-              className={`inline-flex rounded-lg border px-3 py-2 font-semibold transition-colors ${
-                d
-                  ? 'border-orange-500/30 bg-orange-500/10 text-orange-200 hover:bg-orange-500/20'
-                  : 'border-orange-300 bg-orange-100 text-orange-800 hover:bg-orange-200/80'
-              }`}
-              style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1.5px', textTransform: 'uppercase' }}
-            >
-              ← Back to Viewer
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* ── PAGE HEADER ── */}
+      <PageHeader
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onNavigate={startModuleNavigation}
+        currentPage="documents"
+      />
 
       {/* ── MAIN ── */}
       <main className="mx-auto w-full max-w-[1200px] p-5 lg:p-7">
