@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { authAPI } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -10,6 +9,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -38,7 +38,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className={`backdrop-blur-xl ${d ? 'bg-black/85 border-orange-500/25' : 'bg-white border-orange-200 shadow-xl'} border rounded-2xl p-8 transition-colors duration-300`}>
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-black bg-clip-text text-transparent mb-2">
+            <h1 className={`text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent mb-2 ${d ? 'from-orange-400 to-orange-200' : 'from-orange-600 to-black'}`}>
               CEIT Admin Portal
             </h1>
             <h2 className={`text-2xl font-semibold ${d ? 'text-orange-200' : 'text-orange-700'}`}>
@@ -67,16 +67,26 @@ export default function LoginPage() {
               <label className={`block text-sm font-medium mb-2 ${d ? 'text-orange-100' : 'text-orange-900'}`}>
                 Password
               </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className={`w-full px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
-                  d ? 'bg-black/60 border border-orange-500/30 text-white placeholder-orange-200/60' : 'bg-white border border-orange-200 text-black placeholder-orange-400/70'
-                }`}
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className={`w-full px-4 py-3 pr-12 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all ${
+                    d ? 'bg-black/60 border border-orange-500/30 text-white placeholder-orange-200/60' : 'bg-white border border-orange-200 text-black placeholder-orange-400/70'
+                  }`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(p => !p)}
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 text-sm px-1 ${d ? 'text-orange-300 hover:text-white' : 'text-orange-500 hover:text-orange-800'} transition-colors`}
+                  tabIndex={-1}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
             </div>
 
             {error && (
@@ -95,10 +105,7 @@ export default function LoginPage() {
           </form>
 
           <p className={`text-center mt-6 ${d ? 'text-orange-100/85' : 'text-orange-800'}`}>
-            Don't have an account?{' '}
-            <Link href="/register" className={`font-medium transition ${d ? 'text-orange-200 hover:text-white' : 'text-orange-700 hover:text-black'}`}>
-              Register
-            </Link>
+            Welcome to the Admin Page
           </p>
         </div>
       </div>

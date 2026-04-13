@@ -8,8 +8,8 @@
     radial-gradient(900px circle at 88% 18%, rgba(249, 115, 22, 0.08), transparent 50%),
     linear-gradient(135deg, #000000 0%, #111111 55%, #1a1a1a 100%);
   --text-base: #ffffff;
-  --scrollbar-thumb: rgba(249, 115, 22, 0.4);
-  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.6);
+  --scrollbar-thumb: rgba(249, 115, 22, 0.22);
+  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.35);
   --select-bg: #111111;
   --autofill-text: #ffffff;
   --autofill-shadow: rgba(0, 0, 0, 0.86);
@@ -22,8 +22,8 @@
     radial-gradient(900px circle at 85% 20%, rgba(249, 115, 22, 0.09), transparent 50%),
     linear-gradient(135deg, #ffffff 0%, #fffaf5 55%, #fff5eb 100%);
   --text-base: #111111;
-  --scrollbar-thumb: rgba(249, 115, 22, 0.3);
-  --scrollbar-thumb-hover: rgba(249, 115, 22, 0.5);
+  --scrollbar-thumb: rgba(194, 65, 12, 0.2);
+  --scrollbar-thumb-hover: rgba(194, 65, 12, 0.3);
   --select-bg: white;
   --autofill-text: #111111;
   --autofill-shadow: rgba(255, 255, 255, 0.95);
@@ -43,6 +43,8 @@ body {
   background: var(--body-bg);
   color: var(--text-base);
   transition: background 0.3s ease, color 0.3s ease;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 input, textarea, select {
@@ -56,8 +58,8 @@ textarea::placeholder {
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -66,7 +68,9 @@ textarea::placeholder {
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {

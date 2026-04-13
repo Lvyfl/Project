@@ -1,4 +1,4 @@
-const BACKEND_BASE_URL = 'http://localhost:3001';
+const BACKEND_BASE_URL = 'http://localhost:3000';
 const EVENTS_API_URL = `${BACKEND_BASE_URL}/events/public`;
 
 function escapeHtml(value) {

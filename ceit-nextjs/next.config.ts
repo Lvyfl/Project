@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       {
@@ -15,6 +17,15 @@ const nextConfig: NextConfig = {
       },
     ],
     unoptimized: true, // Allow base64 images
+  },
+  async redirects() {
+    return [
+      {
+        source: '/viewer.html',
+        destination: '/viewer',
+        permanent: false,
+      },
+    ];
   },
 };
 

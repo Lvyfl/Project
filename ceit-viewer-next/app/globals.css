@@ -23,4 +23,67 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.24) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.24);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.34);
+}
+
+.viewer-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(249, 115, 22, 0.16) transparent;
+}
+
+.viewer-scroll::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.viewer-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.viewer-scroll::-webkit-scrollbar-thumb {
+  background: rgba(249, 115, 22, 0.16);
+  border-radius: 999px;
+  border: none;
+}
+
+.viewer-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(249, 115, 22, 0.24);
+}
+
+.viewer-scroll::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Kiosk/TV display mode — toggled on document.body via JS */
+body.kiosk-mode {
+  overflow: hidden !important;
+}
+body.kiosk-mode *::-webkit-scrollbar {
+  display: none;
+}
+body.kiosk-mode * {
+  scrollbar-width: none;
 }

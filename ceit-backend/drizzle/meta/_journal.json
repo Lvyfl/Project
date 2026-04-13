@@ -8,6 +8,48 @@
       "when": 1770702879402,
       "tag": "0000_smiling_synch",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770702879403,
+      "tag": "0001_pdf_documents",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770702879404,
+      "tag": "0002_events_media_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770702879405,
+      "tag": "0003_post_likes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770702879410,
+      "tag": "0008_master_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770702879411,
+      "tag": "0009_post_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770702879412,
+      "tag": "0010_post_category",
+      "breakpoints": true
     }
   ]
 }

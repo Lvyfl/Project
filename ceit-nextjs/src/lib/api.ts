@@ -1,10 +1,62 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3001';
+const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, '');
+
+const resolveApiUrl = () => {
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (configuredApiUrl) {
+    return normalizeBaseUrl(configuredApiUrl);
+  }
+
+  return 'http://localhost:3000';
+};
 
 export const api = axios.create({
-  baseURL: API_URL,
+  baseURL: resolveApiUrl(),
 });
+
+const isConnectionError = (error: unknown) => {
+  if (!axios.isAxiosError(error)) return false;
+  return !error.response;
+};
+
+const getAuthBaseCandidates = () => {
+  const candidates: string[] = [];
+  const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  const preferred = normalizeBaseUrl(configuredApiUrl || resolveApiUrl());
+  candidates.push(preferred);
+
+  ['http://localhost:3000', 'http://localhost:3001'].forEach((url) => {
+    if (!candidates.includes(url)) {
+      candidates.push(url);
+    }
+  });
+
+  return candidates;
+};
+
+const postAuthWithFallback = async <T>(path: string, data: T) => {
+  const baseCandidates = getAuthBaseCandidates();
+  let lastError: unknown;
+
+  for (const baseURL of baseCandidates) {
+    try {
+      return await api.request({
+        method: 'post',
+        url: path,
+        data,
+        baseURL,
+      });
+    } catch (error) {
+      lastError = error;
+      if (!isConnectionError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+};
 
 // Add token to requests
 api.interceptors.request.use((config) => {
@@ -35,9 +87,9 @@ api.interceptors.response.use(
 
 export const authAPI = {
   register: (data: { name: string; email: string; password: string; departmentName: string }) =>
-    api.post('/auth/register', data),
+    postAuthWithFallback('/auth/register', data),
   login: (data: { email: string; password: string }) =>
-    api.post('/auth/login', data),
+    postAuthWithFallback('/auth/login', data),
 };
 
 export const postsAPI = {
@@ -50,19 +102,30 @@ export const postsAPI = {
         'Content-Type': 'multipart/form-data',
       },
     }),
-  createPost: (data: { caption: string; imageUrl?: string }) =>
+  createPost: (data: { caption: string; body?: string; category?: string; imageUrl?: string; imageUrls?: string[] }) =>
     api.post('/posts', data),
-  updatePost: (id: string, data: { caption: string; imageUrl?: string }) =>
+  updatePost: (id: string, data: { caption: string; body?: string; category?: string; imageUrl?: string }) =>
     api.put(`/posts/${id}`, data),
   deletePost: (id: string) => api.delete(`/posts/${id}`),
+  getEngagement: () => api.get('/posts/engagement'),
 };
 
 export const eventsAPI = {
   getEvents: (params?: { startDate?: string; endDate?: string; allDepartments?: boolean }) =>
     api.get('/events', { params }),
-  createEvent: (data: { title: string; description?: string; eventDate: string; endDate?: string; location?: string; eventImageUrl?: string; eventLink?: string }) =>
+  createEvent: (data: { title: string; description?: string; eventDate: string; endDate?: string; location?: string; eventImageUrl?: string; eventLink?: string; isAnnouncement?: boolean }) =>
     api.post('/events', data),
-  updateEvent: (id: string, data: { title?: string; description?: string; eventDate?: string; endDate?: string; location?: string; eventImageUrl?: string | null; eventLink?: string | null }) =>
+  updateEvent: (id: string, data: { title?: string; description?: string; eventDate?: string; endDate?: string; location?: string; eventImageUrl?: string | null; eventLink?: string | null; isAnnouncement?: boolean }) =>
     api.put(`/events/${id}`, data),
   deleteEvent: (id: string) => api.delete(`/events/${id}`),
+};
+
+export const backgroundsAPI = {
+  list: () => api.get('/backgrounds'),
+  getActive: () => api.get('/backgrounds/active'),
+  upload: (formData: FormData) =>
+    api.post('/backgrounds/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  activate: (id: string) => api.put(`/backgrounds/${id}/activate`),
+  deactivateAll: () => api.put('/backgrounds/deactivate-all'),
+  delete: (id: string) => api.delete(`/backgrounds/${id}`),
 };

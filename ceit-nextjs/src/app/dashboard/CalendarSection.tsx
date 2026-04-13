@@ -14,6 +14,7 @@ interface CalendarEvent {
   location?: string;
   eventImageUrl?: string;
   eventLink?: string;
+  isAnnouncement?: boolean;
   adminName?: string;
   departmentName?: string;
   departmentId?: string;
@@ -28,12 +29,14 @@ const fileToDataUrl = (file: File) =>
   });
 
 export default function CalendarSection() {
+  const UPCOMING_EVENTS_PER_PAGE = 5;
   const { theme } = useTheme();
   const d = theme === 'dark';
   const { user } = useAuth();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [upcomingSourceEvents, setUpcomingSourceEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEvent, setNewEvent] = useState({
@@ -44,6 +47,7 @@ export default function CalendarSection() {
     location: '',
     eventLink: '',
     eventImageUrl: '',
+    isAnnouncement: false,
   });
   const [submitting, setSubmitting] = useState(false);
   const [openMenuEventId, setOpenMenuEventId] = useState<string | null>(null);
@@ -59,6 +63,7 @@ export default function CalendarSection() {
     location: '',
     eventLink: '',
     eventImageUrl: '',
+    isAnnouncement: false,
   });
 
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -68,6 +73,12 @@ export default function CalendarSection() {
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
   const [deleteTyped, setDeleteTyped] = useState('');
+  const [upcomingPage, setUpcomingPage] = useState(1);
+
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalData, setConfirmModalData] = useState<{ title: string; date: string; isEdit: boolean } | null>(null);
+
+  const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
 
   const today = useMemo(() => {
     const t = new Date();
@@ -105,6 +116,27 @@ export default function CalendarSection() {
     }
   }, [currentMonth, currentYear]);
 
+  const loadUpcomingEvents = useCallback(async () => {
+    try {
+      const startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(startDate);
+      endDate.setMonth(endDate.getMonth() + 2);
+      endDate.setHours(23, 59, 59, 999);
+
+      const res = await eventsAPI.getEvents({
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        allDepartments: true,
+      });
+
+      setUpcomingSourceEvents(res.data);
+    } catch (err) {
+      console.error('Failed to load upcoming events', err);
+      setUpcomingSourceEvents([]);
+    }
+  }, []);
+
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
       if (!menuRef.current) return;
@@ -119,6 +151,10 @@ export default function CalendarSection() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    loadUpcomingEvents();
+  }, [loadUpcomingEvents]);
 
   // Calendar grid computation
   const calendarDays = useMemo(() => {
@@ -161,10 +197,25 @@ export default function CalendarSection() {
 
   // Upcoming events (today and future)
   const upcomingEvents = useMemo(() => {
-    return events
+    return upcomingSourceEvents
       .filter(e => new Date(e.eventDate) >= today)
       .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
-  }, [events, today]);
+  }, [upcomingSourceEvents, today]);
+
+  const announcementEvents = useMemo(() => {
+    return upcomingEvents.filter((event) => !!event.isAnnouncement);
+  }, [upcomingEvents]);
+
+  const totalUpcomingPages = Math.max(1, Math.ceil(upcomingEvents.length / UPCOMING_EVENTS_PER_PAGE));
+
+  const pagedUpcomingEvents = useMemo(() => {
+    const startIndex = (upcomingPage - 1) * UPCOMING_EVENTS_PER_PAGE;
+    return upcomingEvents.slice(startIndex, startIndex + UPCOMING_EVENTS_PER_PAGE);
+  }, [upcomingEvents, upcomingPage]);
+
+  useEffect(() => {
+    setUpcomingPage((prev) => Math.min(prev, totalUpcomingPages));
+  }, [totalUpcomingPages]);
 
   const prevMonth = () => setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
   const nextMonth = () => setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
@@ -187,6 +238,7 @@ export default function CalendarSection() {
         location: newEvent.location || undefined,
         eventLink: newEvent.eventLink || undefined,
         eventImageUrl: newEvent.eventImageUrl || undefined,
+        isAnnouncement: newEvent.isAnnouncement,
       });
       setShowAddModal(false);
       setNewEvent({
@@ -197,8 +249,12 @@ export default function CalendarSection() {
         location: '',
         eventLink: '',
         eventImageUrl: '',
+        isAnnouncement: false,
       });
+      setConfirmModalData({ title: newEvent.title, date: newEvent.eventDate, isEdit: false });
+      setShowConfirmModal(true);
       loadEvents();
+      loadUpcomingEvents();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to create event');
     } finally {
@@ -225,6 +281,7 @@ export default function CalendarSection() {
       location: event.location || '',
       eventLink: event.eventLink || '',
       eventImageUrl: event.eventImageUrl || '',
+      isAnnouncement: !!event.isAnnouncement,
     });
     setShowEditModal(true);
   };
@@ -247,6 +304,7 @@ export default function CalendarSection() {
         location: editEvent.location || undefined,
         eventLink: editEvent.eventLink || undefined,
         eventImageUrl: editEvent.eventImageUrl || undefined,
+        isAnnouncement: editEvent.isAnnouncement,
       };
       const res = await eventsAPI.updateEvent(id, payload);
       const updated: CalendarEvent = res.data;
@@ -260,8 +318,12 @@ export default function CalendarSection() {
         }
       }
 
+      loadUpcomingEvents();
+
       setShowEditModal(false);
       setEditEventId(null);
+      setConfirmModalData({ title: editEvent.title, date: editEvent.eventDate, isEdit: true });
+      setShowConfirmModal(true);
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update event');
     } finally {
@@ -298,6 +360,7 @@ export default function CalendarSection() {
       await eventsAPI.deleteEvent(deleteTarget.id);
       closeDeleteModal();
       loadEvents();
+      loadUpcomingEvents();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete event');
     } finally {
@@ -317,16 +380,17 @@ export default function CalendarSection() {
   const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4">
       {/* School Calendar Card */}
-      <div className={`rounded-2xl p-5 ${d ? 'bg-gradient-to-br from-orange-900/40 to-orange-800/20 border border-orange-500/20' : 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200'} transition-colors duration-300`}>
+          <div className={`rounded-2xl p-5 ${d ? 'bg-gradient-to-br from-orange-900/30 to-orange-800/20 border border-orange-500/20' : 'bg-gradient-to-br from-orange-50 to-orange-100 border border-orange-200'} transition-colors duration-300`}>
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-4">
-          <button onClick={prevMonth} className={`p-1.5 rounded-lg transition-colors ${d ? 'hover:bg-white/10 text-orange-400' : 'hover:bg-orange-200 text-orange-600'}`}>
+              <button onClick={prevMonth} className={`p-1.5 rounded-lg transition-colors ${d ? 'hover:bg-white/10 text-orange-400' : 'hover:bg-orange-200 text-orange-600'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           </button>
           <h3 className={`text-sm font-bold uppercase tracking-widest ${d ? 'text-orange-400' : 'text-orange-700'}`}>
-            School Calendar
+                School Calendar
           </h3>
           <button onClick={nextMonth} className={`p-1.5 rounded-lg transition-colors ${d ? 'hover:bg-white/10 text-orange-400' : 'hover:bg-orange-200 text-orange-600'}`}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
@@ -335,7 +399,7 @@ export default function CalendarSection() {
 
         {/* Month / Year */}
         <div className="text-center mb-4">
-          <p className={`text-2xl font-extrabold tracking-wide ${d ? 'text-white' : 'text-gray-900'}`}>{monthName}</p>
+              <p className={`text-2xl font-extrabold tracking-wide ${d ? 'text-white' : 'text-gray-900'}`}>{monthName}</p>
           <p className={`text-lg font-semibold ${d ? 'text-orange-400' : 'text-orange-600'}`}>{currentYear}</p>
         </div>
 
@@ -385,7 +449,7 @@ export default function CalendarSection() {
                 {/* Hover tooltip for events */}
                 {dayEvents.length > 0 && item.isCurrentMonth && (
                   <div className={`absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 rounded-xl p-3 shadow-2xl opacity-0 invisible group-hover/day:opacity-100 group-hover/day:visible transition-all duration-200 pointer-events-none
-                    ${d ? 'bg-gray-900 border border-orange-500/30' : 'bg-white border border-gray-200 shadow-xl'}
+                    ${d ? 'bg-slate-800/95 border border-orange-500/30' : 'bg-white border border-gray-200 shadow-xl'}
                   `}>
                     <p className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${d ? 'text-orange-400' : 'text-orange-600'}`}>
                       {item.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — {dayEvents.length} event{dayEvents.length > 1 ? 's' : ''}
@@ -410,7 +474,7 @@ export default function CalendarSection() {
                       )}
                     </div>
                     {/* Tooltip arrow */}
-                    <div className={`absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${d ? 'bg-gray-900 border-r border-b border-orange-500/30' : 'bg-white border-r border-b border-gray-200'}`} />
+                    <div className={`absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 ${d ? 'bg-slate-800/95 border-r border-b border-orange-500/30' : 'bg-white border-r border-b border-gray-200'}`} />
                   </div>
                 )}
               </div>
@@ -420,123 +484,147 @@ export default function CalendarSection() {
       </div>
 
       {/* Upcoming Events Card */}
-      <div className={`rounded-2xl p-5 ${d ? 'bg-gradient-to-br from-orange-900/30 to-amber-900/20 border border-orange-500/20' : 'bg-white border border-orange-200 shadow-sm'} transition-colors duration-300`}>
-        <div className="mb-4">
-          <h3 className={`text-sm font-bold uppercase tracking-widest ${d ? 'text-orange-400' : 'text-orange-700'}`}>
+      <div className={`rounded-2xl border p-5 shadow-xl ${d ? 'border-orange-500/15 bg-zinc-900/35 shadow-zinc-900/20' : 'border-orange-200 bg-white shadow-orange-100/40'} transition-colors duration-300`}>
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className={`text-sm font-bold uppercase tracking-widest ${d ? 'text-white' : 'text-zinc-900'}`}>
             Upcoming Events
           </h3>
-          <p className={`text-xs mt-1 ${d ? 'text-orange-300/50' : 'text-orange-500/70'}`}>
-            TODAY: {today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-          </p>
+          <span className={`text-xs font-medium ${d ? 'text-orange-300/80' : 'text-orange-700/80'}`}>📅</span>
         </div>
+        <div className={`mb-4 border-t ${d ? 'border-orange-500/15' : 'border-orange-200'}`} />
 
-        <div className={`space-y-3 flex-1 overflow-x-hidden ${upcomingEvents.length > 5 ? 'max-h-[420px] overflow-y-auto' : ''}`}>
-          {loading ? (
-            <div className="flex items-center justify-center py-10">
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500/30 border-t-orange-500"></div>
-            </div>
-          ) : upcomingEvents.length === 0 ? (
-            <div className={`flex items-center justify-center py-10 ${d ? 'text-gray-500' : 'text-gray-400'}`}>
-              <p className="text-sm">No upcoming events</p>
-            </div>
-          ) : (
-            upcomingEvents.map(event => (
-              <div
-                key={event.id}
-                className={`relative rounded-xl p-3 transition-colors ${d ? 'bg-white/5 border border-orange-500/10 hover:border-orange-500/30' : 'bg-orange-50 border border-orange-100 hover:border-orange-300'}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => openDetails(event)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') openDetails(event);
-                }}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`w-10 h-10 rounded-lg flex-shrink-0 flex flex-col items-center justify-center text-center ${d ? 'bg-orange-500/20' : 'bg-orange-100'}`}>
-                    <span className={`text-[10px] font-bold uppercase ${d ? 'text-orange-400' : 'text-orange-600'}`}>
-                      {new Date(event.eventDate).toLocaleString('default', { month: 'short' })}
-                    </span>
-                    <span className={`text-sm font-bold leading-none ${d ? 'text-white' : 'text-gray-900'}`}>
-                      {new Date(event.eventDate).getDate()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${d ? 'text-white' : 'text-gray-900'}`}>{event.title}</p>
-                    {event.location && (
-                      <p className={`text-xs mt-0.5 ${d ? 'text-gray-400' : 'text-gray-500'}`}>📍 {event.location}</p>
-                    )}
-                    {event.departmentName && (
-                      <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 rounded-full font-medium ${d ? 'bg-orange-500/15 text-orange-400' : 'bg-orange-100 text-orange-700'}`}>
-                        {event.departmentName}
-                      </span>
-                    )}
-                  </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-orange-500/30 border-t-orange-500"></div>
+          </div>
+        ) : upcomingEvents.length === 0 ? (
+          <p className={`text-sm ${d ? 'text-zinc-400' : 'text-zinc-600'}`}>No upcoming events.</p>
+        ) : (
+          <>
+          <div className="relative pl-8 space-y-4">
+            <div className={`absolute left-[11px] top-1 bottom-1 w-px ${d ? 'bg-orange-500/50' : 'bg-orange-300'}`} />
+            {pagedUpcomingEvents.map((event) => {
+              const eventDate = new Date(event.eventDate);
+              const dateLabel = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              const timeLabel = eventDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
-                  {/* 3-dot menu */}
-                  {event.departmentId && user?.departmentId && event.departmentId === user.departmentId ? (
-                    <div
-                      className="relative"
-                      ref={openMenuEventId === event.id ? menuRef : undefined}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    >
-                    <button
-                      type="button"
-                      onClick={() => setOpenMenuEventId(prev => (prev === event.id ? null : event.id))}
-                      className={`p-2 rounded-lg transition-colors ${d ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-orange-100'}`}
-                      aria-label="Event actions"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                      </svg>
-                    </button>
+              return (
+                <article
+                  key={event.id}
+                  className="relative"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openDetails(event)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') openDetails(event);
+                  }}
+                >
+                  <span className="absolute -left-8 top-1.5 h-2.5 w-2.5 rounded-full bg-orange-500 shadow-[0_0_0_4px_rgba(249,115,22,0.15)]" />
 
-                    {openMenuEventId === event.id && (
-                      <div className={`absolute right-0 mt-2 w-36 rounded-xl overflow-hidden z-50 ${d ? 'bg-gray-900 border border-orange-500/20' : 'bg-white border border-gray-200 shadow-xl'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold leading-5 ${d ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                        {dateLabel} {event.title || 'Untitled Event'}
+                      </p>
+                      <p className={`mt-1 text-xs ${d ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                        {timeLabel}{event.location ? ` • ${event.location}` : ''}
+                      </p>
+                    </div>
+
+                    {event.departmentId && user?.departmentId && event.departmentId === user.departmentId ? (
+                      <div
+                        className="relative"
+                        ref={openMenuEventId === event.id ? menuRef : undefined}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
                         <button
                           type="button"
-                          onClick={() => openEdit(event)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${d ? 'text-gray-200 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-50'}`}
+                          onClick={() => setOpenMenuEventId(prev => (prev === event.id ? null : event.id))}
+                          className={`p-1.5 rounded-lg transition-colors ${d ? 'text-gray-300 hover:bg-white/10' : 'text-gray-600 hover:bg-orange-100'}`}
+                          aria-label="Event actions"
                         >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                           </svg>
-                          <span>Edit</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => openDeleteModal(event)}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${d ? 'text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`}
-                          disabled={submitting}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 11v6M14 11v6" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-7 0h8m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2" />
-                          </svg>
-                          <span>Delete</span>
-                        </button>
+
+                        {openMenuEventId === event.id && (
+                          <div className={`absolute right-0 mt-2 w-36 rounded-xl overflow-hidden z-50 ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white border border-gray-200 shadow-xl'}`}>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(event)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${d ? 'text-gray-200 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-50'}`}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+                              </svg>
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openDeleteModal(event)}
+                              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${d ? 'text-red-300 hover:bg-red-500/10' : 'text-red-600 hover:bg-red-50'}`}
+                              disabled={submitting}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 11v6M14 11v6" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m-7 0h8m-8 0V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+                              </svg>
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        className={`p-1.5 rounded-lg ${d ? 'text-gray-600' : 'text-gray-400'}`}
+                        title="You can only edit events from your department"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11h.01M17 16.5a4.5 4.5 0 00-9 0V18h9v-1.5z" />
+                        </svg>
                       </div>
                     )}
-                    </div>
-                  ) : (
-                    <div
-                      className={`p-2 rounded-lg ${d ? 'text-gray-600' : 'text-gray-400'}`}
-                      title="You can only edit events from your department"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5 9 6.343 9 8s1.343 3 3 3z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11h.01M17 16.5a4.5 4.5 0 00-9 0V18h9v-1.5z" />
-                      </svg>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+
+          {upcomingEvents.length > UPCOMING_EVENTS_PER_PAGE && (
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setUpcomingPage((prev) => Math.max(1, prev - 1))}
+                disabled={upcomingPage === 1}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${upcomingPage === 1 ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-zinc-900/60 border border-orange-500/20 text-orange-200 hover:bg-zinc-900/80' : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'}`}
+              >
+                Previous
+              </button>
+
+              <span className={`text-[11px] ${d ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                Page {upcomingPage} of {totalUpcomingPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setUpcomingPage((prev) => Math.min(totalUpcomingPages, prev + 1))}
+                disabled={upcomingPage === totalUpcomingPages}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${upcomingPage === totalUpcomingPages ? 'opacity-50 cursor-not-allowed' : ''} ${d ? 'bg-zinc-900/60 border border-orange-500/20 text-orange-200 hover:bg-zinc-900/80' : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'}`}
+              >
+                Next Page
+              </button>
+            </div>
           )}
-        </div>
+          </>
+        )}
+      </div>
+
       </div>
 
       {/* Info Card (Vision/Mission style) */}
@@ -548,9 +636,36 @@ export default function CalendarSection() {
               Announcements
             </h3>
           </div>
-          <p className={`text-xs leading-relaxed ${d ? 'text-gray-300' : 'text-white/90'}`}>
-            Stay updated with the latest events and announcements from all departments. Use the calendar to track important dates and deadlines.
-          </p>
+          {announcementEvents.length === 0 ? (
+            <p className={`text-xs leading-relaxed ${d ? 'text-gray-300' : 'text-white/90'}`}>
+              No marked announcements yet. Toggle the announcement option when adding an event to show it here.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {(showAllAnnouncements ? announcementEvents : announcementEvents.slice(0, 3)).map((event) => (
+                <article key={event.id} className={`rounded-lg p-2 ${d ? 'bg-white/5 border border-white/10' : 'bg-white/15 border border-white/30'}`}>
+                  <p className={`text-xs font-semibold ${d ? 'text-white' : 'text-white'}`}>{event.title || 'Untitled Event'}</p>
+                  <p className={`mt-0.5 text-[11px] ${d ? 'text-gray-300' : 'text-white/90'}`}>
+                    {new Date(event.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {event.location ? ` • ${event.location}` : ''}
+                  </p>
+                  {event.description && (
+                    <p className={`mt-1 text-[11px] line-clamp-2 ${d ? 'text-gray-400' : 'text-white/80'}`}>{event.description}</p>
+                  )}
+                </article>
+              ))}
+              {announcementEvents.length > 3 && (
+                <button
+                  onClick={() => setShowAllAnnouncements(p => !p)}
+                  className={`w-full mt-1 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wide transition-colors ${
+                    d ? 'bg-white/10 text-orange-300 hover:bg-white/20' : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                >
+                  {showAllAnnouncements ? `Show Less ▲` : `See More (${announcementEvents.length - 3} more) ▼`}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={`rounded-2xl p-5 ${d ? 'bg-gradient-to-br from-amber-600/20 to-orange-500/10 border border-orange-500/20' : 'bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg'} transition-colors duration-300`}>
@@ -575,9 +690,9 @@ export default function CalendarSection() {
 
       {/* Add Event Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowAddModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-sm md:items-center" onClick={() => setShowAddModal(false)}>
           <div
-            className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-gray-900 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
+            className={`my-auto w-full max-w-[24rem] rounded-2xl p-4 md:max-w-[26rem] md:p-5 max-h-[88vh] overflow-y-auto ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
             onClick={e => e.stopPropagation()}
           >
             <h3 className={`text-lg font-bold mb-4 ${d ? 'text-white' : 'text-gray-900'}`}>Add New Event</h3>
@@ -635,14 +750,27 @@ export default function CalendarSection() {
                 />
               </div>
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link</label>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link (Optional)</label>
                 <input
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   value={newEvent.eventLink}
                   onChange={e => setNewEvent(p => ({ ...p, eventLink: e.target.value }))}
                   className={`w-full px-3 py-2 rounded-lg text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
                   placeholder="https://youtube.com/..."
                 />
+              </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Type</label>
+                <label className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'}`}>
+                  <input
+                    type="checkbox"
+                    checked={newEvent.isAnnouncement}
+                    onChange={e => setNewEvent(p => ({ ...p, isAnnouncement: e.target.checked }))}
+                    className="accent-orange-500"
+                  />
+                  <span>Mark as announcement</span>
+                </label>
               </div>
               <div>
                 <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Image</label>
@@ -692,9 +820,9 @@ export default function CalendarSection() {
 
       {/* Delete Confirmation Modal (2-step) */}
       {showDeleteModal && deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={closeDeleteModal}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={closeDeleteModal}>
           <div
-            className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-gray-900 border border-orange-500/20' : 'bg-white shadow-2xl border border-orange-200/60'}`}
+            className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white shadow-2xl border border-orange-200/60'}`}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-3">
@@ -776,9 +904,9 @@ export default function CalendarSection() {
 
       {/* Edit Event Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowEditModal(false)}>
           <div
-            className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-gray-900 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
+            className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
             onClick={e => e.stopPropagation()}
           >
             <h3 className={`text-lg font-bold mb-4 ${d ? 'text-white' : 'text-gray-900'}`}>Edit Event</h3>
@@ -833,14 +961,27 @@ export default function CalendarSection() {
                 />
               </div>
               <div>
-                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link</label>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Link (Optional)</label>
                 <input
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   value={editEvent.eventLink}
                   onChange={e => setEditEvent(p => ({ ...p, eventLink: e.target.value }))}
                   className={`w-full px-3 py-2 rounded-lg text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'} focus:outline-none focus:ring-2 focus:ring-orange-500`}
                   placeholder="https://youtube.com/..."
                 />
+              </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Type</label>
+                <label className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${d ? 'bg-white/10 border border-white/20 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'}`}>
+                  <input
+                    type="checkbox"
+                    checked={editEvent.isAnnouncement}
+                    onChange={e => setEditEvent(p => ({ ...p, isAnnouncement: e.target.checked }))}
+                    className="accent-orange-500"
+                  />
+                  <span>Mark as announcement</span>
+                </label>
               </div>
               <div>
                 <label className={`block text-xs font-semibold mb-1 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Event Image</label>
@@ -890,9 +1031,9 @@ export default function CalendarSection() {
 
       {/* Event Details Modal */}
       {showDetailsModal && detailsEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowDetailsModal(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowDetailsModal(false)}>
           <div
-            className={`w-full max-w-lg rounded-2xl p-6 max-h-[85vh] overflow-y-auto ${d ? 'bg-gray-900 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
+            className={`w-full max-w-lg rounded-2xl p-6 max-h-[85vh] overflow-y-auto ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white shadow-2xl'}`}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
@@ -992,6 +1133,56 @@ export default function CalendarSection() {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Success Confirmation Modal */}
+      {showConfirmModal && confirmModalData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={() => setShowConfirmModal(false)}>
+          <div
+            className={`w-full max-w-sm rounded-2xl p-6 shadow-2xl ${d ? 'bg-slate-800/95 border border-orange-500/20' : 'bg-white'}`}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-lg">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Heading */}
+            <h3 className={`text-center text-lg font-bold mb-1 ${d ? 'text-white' : 'text-gray-900'}`}>
+              {confirmModalData.isEdit ? 'Event Updated!' : 'Event Created!'}
+            </h3>
+            <p className={`text-center text-sm mb-4 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+              {confirmModalData.isEdit ? 'Your changes have been saved successfully.' : 'The event has been added to the calendar.'}
+            </p>
+
+            {/* Event summary */}
+            <div className={`rounded-xl p-3 mb-5 ${d ? 'bg-white/5 border border-white/10' : 'bg-orange-50 border border-orange-100'}`}>
+              <p className={`text-xs font-semibold uppercase tracking-wide mb-1 ${d ? 'text-orange-400' : 'text-orange-600'}`}>
+                {confirmModalData.isEdit ? 'Updated Event' : 'New Event'}
+              </p>
+              <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{confirmModalData.title}</p>
+              {confirmModalData.date && (
+                <p className={`text-xs mt-0.5 ${d ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {new Date(confirmModalData.date).toLocaleString('en-US', {
+                    weekday: 'short', month: 'long', day: 'numeric', year: 'numeric',
+                    hour: 'numeric', minute: '2-digit', hour12: true,
+                  })}
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={() => setShowConfirmModal(false)}
+              className="w-full py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-sm font-semibold rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all"
+            >
+              Got it
+            </button>
           </div>
         </div>
       )}

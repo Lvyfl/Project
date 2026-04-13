@@ -50,7 +50,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <div className={`backdrop-blur-xl ${d ? 'bg-black/85 border-orange-500/25' : 'bg-white border-orange-200 shadow-xl'} border rounded-2xl p-8 transition-colors duration-300`}>
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-black bg-clip-text text-transparent mb-2">
+            <h1 className={`text-4xl font-bold bg-gradient-to-r bg-clip-text text-transparent mb-2 ${d ? 'from-orange-400 to-orange-200' : 'from-orange-600 to-black'}`}>
               CEIT Admin Portal
             </h1>
             <h2 className={`text-2xl font-semibold ${d ? 'text-orange-200' : 'text-orange-700'}`}>

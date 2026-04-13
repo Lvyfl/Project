@@ -17,14 +17,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // On mount, read from localStorage and apply
   useEffect(() => {
     const stored = localStorage.getItem('theme') as Theme | null;
-    if (stored === 'light' || stored === 'dark') {
-      setTheme(stored);
-      document.documentElement.classList.toggle('light', stored === 'light');
-      document.documentElement.classList.toggle('dark', stored === 'dark');
-    } else {
-      // default dark
-      document.documentElement.classList.add('dark');
-    }
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const resolved: Theme = stored === 'light' || stored === 'dark' ? stored : (prefersDark ? 'dark' : 'light');
+    setTheme(resolved);
+    document.documentElement.classList.toggle('light', resolved === 'light');
+    document.documentElement.classList.toggle('dark', resolved === 'dark');
   }, []);
 
   const toggleTheme = useCallback(() => {

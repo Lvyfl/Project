@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Daily Herald</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Oswald:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --orange: #E85D04;
+    --orange-light: #F48C06;
+    --orange-dark: #9D0208;
+    --black: #0D0D0D;
+    --gray-dark: #1A1A1A;
+    --gray-mid: #4A4A4A;
+    --gray-light: #C4C4C4;
+    --white: #FAFAFA;
+    --cream: #FFF8F0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--white);
+    color: var(--black);
+    font-family: 'Libre Baskerville', Georgia, serif;
+    overflow-x: hidden;
+  }
+
+  /* ── TICKER ── */
+  .ticker {
+    background: var(--orange);
+    color: white;
+    padding: 7px 0;
+    overflow: hidden;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .ticker-inner {
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  .ticker-label {
+    background: var(--black);
+    color: var(--orange);
+    font-family: 'Oswald', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 2px;
+    padding: 0 14px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: 26px;
+    display: flex;
+    align-items: center;
+  }
+  .ticker-track {
+    overflow: hidden;
+    flex: 1;
+  }
+  .ticker-text {
+    display: inline-flex;
+    gap: 60px;
+    animation: ticker 30s linear infinite;
+    white-space: nowrap;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+  }
+  .ticker-text span::before { content: "◆  "; font-size: 8px; }
+  @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+  /* ── MASTHEAD ── */
+  .masthead {
+    background: var(--white);
+    border-bottom: 4px solid var(--orange);
+    padding: 24px 0 0;
+  }
+  .masthead-top {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding-bottom: 16px;
+  }
+  .masthead-meta {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--gray-mid);
+    text-transform: uppercase;
+    line-height: 1.8;
+  }
+  .masthead-title {
+    text-align: center;
+    flex: 1;
+  }
+  .masthead-title h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(42px, 7vw, 82px);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -2px;
+    color: var(--black);
+    text-transform: uppercase;
+  }
+  .masthead-title h1 span { color: var(--orange); }
+  .masthead-tagline {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--gray-mid);
+    text-transform: uppercase;
+    margin-top: 6px;
+    border-top: 1px solid var(--gray-light);
+    border-bottom: 1px solid var(--gray-light);
+    padding: 4px 0;
+  }
+  .masthead-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+  }
+  .btn {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  .btn-primary { background: var(--orange); color: white; }
+  .btn-primary:hover { background: var(--orange-dark); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--black); color: var(--black); }
+  .btn-outline:hover { background: var(--black); color: white; }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--black);
+    padding: 0 40px;
+  }
+  .nav-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0;
+  }
+  nav a {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--gray-light);
+    text-decoration: none;
+    padding: 12px 18px;
+    transition: all 0.2s;
+    border-bottom: 3px solid transparent;
+    display: block;
+  }
+  nav a:hover, nav a.active { color: var(--orange); border-bottom-color: var(--orange); }
+  .nav-search {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-search input {
+    background: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    color: white;
+    padding: 6px 12px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    width: 180px;
+    outline: none;
+  }
+  .nav-search input::placeholder { color: #666; }
+  .nav-search input:focus { border-color: var(--orange); }
+  .nav-search button {
+    background: var(--orange);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 40px;
+  }
+
+  /* ── SECTION HEADERS ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .section-header h2 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 13px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--black);
+    white-space: nowrap;
+  }
+  .section-header .line {
+    flex: 1;
+    height: 2px;
+    background: var(--orange);
+  }
+  .section-header .line-thin {
+    flex: 1;
+    height: 1px;
+    background: var(--gray-light);
+  }
+
+  /* ── HERO GRID ── */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 0;
+    border: 1px solid var(--gray-light);
+    margin-bottom: 40px;
+  }
+  .hero-main {
+    grid-row: 1 / 3;
+    position: relative;
+    overflow: hidden;
+    border-right: 1px solid var(--gray-light);
+  }
+  .hero-main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.6s ease;
+    min-height: 380px;
+  }
+  .hero-main:hover img { transform: scale(1.03); }
+  .hero-main .overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, transparent 100%);
+    padding: 32px;
+  }
+  .hero-main .category-tag {
+    display: inline-block;
+    background: var(--orange);
+    color: white;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    margin-bottom: 10px;
+  }
+  .hero-main h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 900;
+    color: white;
+    line-height: 1.15;
+    margin-bottom: 10px;
+  }
+  .hero-main .byline { font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: 1px; color: #aaa; text-transform: uppercase; }
+
+  .hero-side-top, .hero-side-bottom {
+    padding: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .hero-side-top { border-bottom: 1px solid var(--gray-light); }
+  .hero-side-top:hover, .hero-side-bottom:hover { background: var(--cream); }
+  .hero-side-top img, .hero-side-bottom img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 12px;
+  }
+  .hero-side-top .category-tag, .hero-side-bottom .category-tag {
+    display: inline-block;
+    background: var(--orange);
+    color: white;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    margin-bottom: 8px;
+  }
+  .hero-side-top h4, .hero-side-bottom h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--black);
+    margin-bottom: 6px;
+  }
+  .hero-side-top p, .hero-side-bottom p { font-size: 12px; color: var(--gray-mid); line-height: 1.5; }
+
+  /* ── THREE COLUMN ARTICLES ── */
+  .articles-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+    margin-bottom: 40px;
+  }
+  .article-card {
+    cursor: pointer;
+    border-top: 3px solid var(--gray-light);
+    padding-top: 16px;
+    transition: border-color 0.2s;
+  }
+  .article-card:hover { border-top-color: var(--orange); }
+  .article-card img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    display: block;
+    margin-bottom: 14px;
+    transition: opacity 0.2s;
+  }
+  .article-card:hover img { opacity: 0.9; }
+  .article-card .category-tag {
+    display: inline-block;
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .article-card h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--black);
+    margin-bottom: 8px;
+  }
+  .article-card p { font-size: 13px; color: var(--gray-mid); line-height: 1.7; margin-bottom: 10px; }
+  .article-card .meta { font-family: 'Oswald', sans-serif; font-size: 11px; color: #999; letter-spacing: 1px; text-transform: uppercase; }
+
+  /* ── CONTENT ROW: articles + sidebar ── */
+  .content-row {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 40px;
+    margin-bottom: 40px;
+  }
+
+  /* ── FEATURED PHOTO CAPTION ── */
+  .photo-feature {
+    background: var(--black);
+    color: white;
+    margin-bottom: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .photo-feature img { width: 100%; height: 340px; object-fit: cover; display: block; }
+  .photo-feature-text {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .photo-feature-text .label {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 16px;
+  }
+  .photo-feature-text h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 14px;
+    font-style: italic;
+  }
+  .photo-feature-text p { font-size: 13px; color: #bbb; line-height: 1.8; margin-bottom: 20px; }
+  .photo-feature-text .photo-credit { font-family: 'Oswald', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #666; }
+
+  /* ── PDF SECTION ── */
+  .pdf-section {
+    background: var(--cream);
+    border: 1px solid #eee;
+    border-left: 4px solid var(--orange);
+    padding: 32px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+  }
+  .pdf-icon {
+    width: 72px;
+    height: 88px;
+    background: var(--orange);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    font-size: 28px;
+    color: white;
+  }
+  .pdf-icon::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    border-style: solid;
+    border-width: 0 16px 16px 0;
+    border-color: transparent var(--cream) transparent transparent;
+  }
+  .pdf-info h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .pdf-info p { font-size: 13px; color: var(--gray-mid); margin-bottom: 14px; }
+  .pdf-editions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .pdf-card {
+    background: white;
+    border: 1px solid var(--gray-light);
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--black);
+  }
+  .pdf-card:hover { border-color: var(--orange); color: var(--orange); }
+  .pdf-card svg { width: 16px; height: 16px; }
+
+  /* ── ANNOUNCEMENTS ── */
+  .announcements {
+    background: var(--black);
+    padding: 20px;
+    color: white;
+  }
+  .announcements .section-header h2 { color: white; }
+  .announcements .section-header .line { background: var(--orange); }
+  .ann-list { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  .ann-item {
+    border-left: 3px solid var(--orange);
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.04);
+    transition: background 0.2s;
+    cursor: pointer;
+  }
+  .ann-item:hover { background: rgba(232, 93, 4, 0.15); }
+  .ann-item .ann-type {
+    font-family: 'Oswald', sans-serif;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--orange);
+    margin-bottom: 6px;
+  }
+  .ann-item h4 {
+    font-family: 'Playfair Display', serif;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.4;
+    margin-bottom: 8px;
+  }
+  .ann-item p { font-size: 12px; color: #999; line-height: 1.6; }
+
+  /* ── CALENDAR ── */
+  .calendar-section { margin-bottom: 40px; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .cal-right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .mini-calendar {
+    background: white;
+    border: 1px solid var(--gray-light);
+    padding: 20px;
+  }
+  .cal-month-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .cal-month-header h3 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .cal-nav { background: none; border: none; cursor: pointer; color: var(--black); font-size: 18px; padding: 2px 8px; }
+  .cal-nav:hover { color: var(--orange); }
+  .cal-days-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    text-align: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--gray-mid);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .cal-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+    text-align: center;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.15s;
+  }
+  .cal-day:hover { background: var(--orange); color: white; }
+  .cal-day.today { background: var(--black); color: white; font-weight: 600; }
+  .cal-day.has-event { position: relative; }
+  .cal-day.has-event::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--orange);
+  }
+  .cal-day.other-month { color: #ccc; }
+  .events-list h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 16px;
+  }
+  .event-item {
+    display: flex;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .event-item:hover .event-date-box { background: var(--orange); color: white; }
+  .event-date-box {
+    flex-shrink: 0;
+    width: 52px;
+    background: var(--cream);
+    border: 1px solid var(--orange);
+    text-align: center;
+    padding: 6px 4px;
+    transition: all 0.2s;
+  }
+  .event-date-box .day { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 900; line-height: 1; }
+  .event-date-box .month { font-family: 'Oswald', sans-serif; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; }
+  .event-info h5 { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .event-info .event-meta { font-family: 'Oswald', sans-serif; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--gray-mid); margin-bottom: 4px; }
+  .event-info p { font-size: 12px; color: var(--gray-mid); line-height: 1.5; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {}
+  .sidebar-widget { margin-bottom: 28px; }
+  .sidebar-widget.trending { background: var(--black); padding: 20px; color: white; }
+  .sidebar-widget.trending .section-header h2 { color: white; }
+  .trending-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    cursor: pointer;
+    align-items: flex-start;
+  }
+  .trending-item:last-child { border-bottom: none; }
+  .trend-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: rgba(232,93,4,0.3);
+    line-height: 1;
+    min-width: 28px;
+  }
+  .trend-text h5 {
+    font-family: 'Playfair Display', serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+  .trend-text .meta { font-family: 'Oswald', sans-serif; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #666; }
+  .sidebar-widget.newsletter { background: var(--orange); padding: 20px; }
+  .sidebar-widget.newsletter h3 { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 900; color: white; margin-bottom: 8px; }
+  .sidebar-widget.newsletter p { font-size: 12px; color: rgba(255,255,255,0.85); margin-bottom: 14px; line-height: 1.6; }
+  .sidebar-widget.newsletter input {
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    outline: none;
+  }
+  .sidebar-widget.newsletter button {
+    width: 100%;
+    background: var(--black);
+    color: white;
+    border: none;
+    padding: 9px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .sidebar-widget.newsletter button:hover { opacity: 0.8; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--gray-dark);
+    color: #bbb;
+    padding: 40px 0 20px;
+    margin-top: 20px;
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 40px;
+  }
+  .footer-top {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    gap: 40px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid #333;
+    margin-bottom: 20px;
+  }
+  .footer-brand h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: white;
+    margin-bottom: 10px;
+  }
+  .footer-brand h2 span { color: var(--orange); }
+  .footer-brand p { font-size: 12px; line-height: 1.7; color: #888; }
+  .footer-col h4 {
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: white;
+    margin-bottom: 14px;
+    border-bottom: 2px solid var(--orange);
+    padding-bottom: 8px;
+    display: inline-block;
+  }
+  .footer-col a {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    text-decoration: none;
+    margin-bottom: 8px;
+    transition: color 0.2s;
+  }
+  .footer-col a:hover { color: var(--orange); }
+  .footer-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Oswald', sans-serif;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero-grid { animation: fadeUp 0.6s ease both; }
+  .articles-grid { animation: fadeUp 0.6s 0.15s ease both; }
+  .photo-feature { animation: fadeUp 0.6s 0.25s ease both; }
+
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; }
+    .hero-main { grid-row: auto; border-right: none; border-bottom: 1px solid var(--gray-light); }
+    .articles-grid { grid-template-columns: 1fr 1fr; }
+    .photo-feature { grid-template-columns: 1fr; }
+    .ann-list { grid-template-columns: 1fr; }
+    .cal-grid { grid-template-columns: 1fr; }
+    .footer-top { grid-template-columns: 1fr 1fr; }
+    .masthead-top { flex-direction: column; align-items: center; gap: 12px; }
+    .page { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- BREAKING NEWS TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <div class="ticker-label">Breaking</div>
+    <div class="ticker-track">
+      <div class="ticker-text">
+        <span>City Council approves $2.4B infrastructure overhaul for downtown corridor</span>
+        <span>Local tech startup raises record $180M Series B funding round</span>
+        <span>New public transit expansion to connect three underserved districts by 2027</span>
+        <span>Annual arts festival returns with over 200 performers from 40 countries</span>
+        <span>School board votes to introduce AI literacy curriculum starting next fall</span>
+        <span>City Council approves $2.4B infrastructure overhaul for downtown corridor</span>
+        <span>Local tech startup raises record $180M Series B funding round</span>
+        <span>New public transit expansion to connect three underserved districts by 2027</span>
+        <span>Annual arts festival returns with over 200 performers from 40 countries</span>
+        <span>School board votes to introduce AI literacy curriculum starting next fall</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MASTHEAD -->
+<div class="masthead">
+  <div class="masthead-top">
+    <div class="masthead-meta">
+      Tuesday, March 3, 2026<br>
+      Vol. CXLII · No. 044<br>
+      Est. 1884
+    </div>
+    <div class="masthead-title">
+      <h1>The Daily <span>Herald</span></h1>
+      <div class="masthead-tagline">Truth · Community · Progress</div>
+    </div>
+    <div class="masthead-actions">
+      <button class="btn btn-primary">Subscribe</button>
+      <button class="btn btn-outline">Sign In</button>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-inner">
+      <a href="#" class="active">Home</a>
+      <a href="#">Local</a>
+      <a href="#">Politics</a>
+      <a href="#">Business</a>
+      <a href="#">Culture</a>
+      <a href="#">Sports</a>
+      <a href="#">Opinion</a>
+      <a href="#">Photos</a>
+      <a href="#">Archives</a>
+      <div class="nav-search">
+        <input type="text" placeholder="Search articles…">
+        <button>🔍</button>
+      </div>
+    </div>
+  </nav>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="page">
+
+  <!-- HERO -->
+  <div class="section-header" style="margin-bottom:16px;">
+    <h2>Top Stories</h2>
+    <div class="line"></div>
+    <span style="font-family:'Oswald',sans-serif;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#999;white-space:nowrap;">March 3, 2026</span>
+  </div>
+
+  <div class="hero-grid">
+    <div class="hero-main">
+      <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=900&q=80" alt="City skyline">
+      <div class="overlay">
+        <div class="category-tag">Local</div>
+        <h3>Downtown Revitalization Plan Wins City Council Approval in Historic 9–2 Vote</h3>
+        <p class="byline">By Margaret Chen · 2 hours ago</p>
+      </div>
+    </div>
+    <div class="hero-side-top">
+      <img src="https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=500&q=80" alt="Business">
+      <div class="category-tag">Business</div>
+      <h4>Regional Tech Corridor Draws $600M in New Investment</h4>
+      <p>Three Fortune 500 companies announced plans to relocate regional HQs to the metro area.</p>
+    </div>
+    <div class="hero-side-bottom">
+      <img src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&q=80" alt="Event">
+      <div class="category-tag">Culture</div>
+      <h4>Heritage Arts Festival Breaks Attendance Records for Third Year Running</h4>
+      <p>Over 85,000 visitors attended opening weekend across 14 downtown venues.</p>
+    </div>
+  </div>
+
+  <!-- ARTICLES GRID -->
+  <div class="section-header">
+    <h2>Latest News</h2>
+    <div class="line"></div>
+  </div>
+
+  <div class="articles-grid">
+    <div class="article-card">
+      <img src="https://images.unsplash.com/photo-1606761568499-6d2451b23c66?w=500&q=80" alt="Education">
+      <div class="category-tag">Education</div>
+      <h4>School Districts Launch Bold AI Literacy Initiative Across 48 Schools</h4>
+      <p>A new curriculum framework will introduce critical digital skills to over 32,000 students beginning in September.</p>
+      <div class="meta">Sarah Okafor · 4h ago · 5 min read</div>
+    </div>
+    <div class="article-card">
+      <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=500&q=80" alt="Health">
+      <div class="category-tag">Health</div>
+      <h4>New Community Health Clinics to Open in Four Neighborhoods This Spring</h4>
+      <p>The $28M expansion will provide free primary care services to an estimated 14,000 uninsured residents.</p>
+      <div class="meta">Dr. Lena Park · 6h ago · 4 min read</div>
+    </div>
+    <div class="article-card">
+      <img src="https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=500&q=80" alt="Environment">
+      <div class="category-tag">Environment</div>
+      <h4>City Surpasses 2025 Carbon Reduction Goals Eight Months Ahead of Schedule</h4>
+      <p>A combination of electric transit expansion and building retrofits delivered a 34% drop in municipal emissions.</p>
+      <div class="meta">Tom Vasquez · 8h ago · 6 min read</div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT + RIGHT RAIL (Calendar / Events / Announcements) -->
+  <div class="cal-grid">
+
+    <!-- LEFT: articles, photo, PDF, in-depth -->
+    <div>
+      <!-- PHOTO CAPTION FEATURE -->
+      <div class="section-header">
+        <h2>Photo of the Day</h2>
+        <div class="line"></div>
+      </div>
+      <div class="photo-feature">
+        <img src="https://images.unsplash.com/photo-1518985264055-786a8e24de55?w=900&q=80" alt="Photo of the day">
+        <div class="photo-feature-text">
+          <div class="label">📷 Featured Photograph</div>
+          <h3>"Sunrise Over the Harbor — A City Waking Up"</h3>
+          <p>Morning light breaks across the marina as fishing boats depart for the day's catch. This image captures the quiet resilience of a waterfront community that has weathered decades of economic change while preserving its maritime identity.</p>
+          <div class="photo-credit">Photo by James Whitmore · Herald Staff Photographer</div>
+        </div>
+      </div>
+
+      <!-- PDF SECTION -->
+      <div class="section-header" style="margin-top:32px;">
+        <h2>Digital Editions</h2>
+        <div class="line"></div>
+      </div>
+      <div class="pdf-section">
+        <div class="pdf-icon">📄</div>
+        <div class="pdf-info">
+          <h3>Download the Full Newspaper</h3>
+          <p>Read the complete print edition in PDF format — optimized for screen and print. Archives available back to 1990.</p>
+          <div class="pdf-editions">
+            <div class="pdf-card">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>
+              Today · Mar 3
+            </div>
+            <div class="pdf-card">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>
+              Sunday · Mar 1
+            </div>
+            <div class="pdf-card">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/></svg>
+              Saturday · Feb 28
+            </div>
+            <div class="pdf-card" style="border-color:var(--black);background:var(--black);color:white;">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 11H7.83l4.88-4.88c.39-.39.39-1.03 0-1.42-.39-.39-1.02-.39-1.41 0l-6.59 6.59c-.39.39-.39 1.02 0 1.41l6.59 6.59c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L7.83 13H19c.55 0 1-.45 1-1s-.45-1-1-1z"/></svg>
+              Browse Archive
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- IN DEPTH -->
+      <div class="section-header" style="margin-top:32px;">
+        <h2>In Depth</h2>
+        <div class="line"></div>
+      </div>
+      <div class="articles-grid" style="grid-template-columns:1fr 1fr;">
+        <div class="article-card">
+          <img src="https://images.unsplash.com/photo-1548266652-99cf27701ced?w=500&q=80" alt="Politics">
+          <div class="category-tag">Politics</div>
+          <h4>State Budget Negotiations Enter Final Week with Key Programs Still in Dispute</h4>
+          <p>Housing, transit, and education remain flashpoints as lawmakers race toward the March 15 deadline.</p>
+          <div class="meta">Rosa Kim · Yesterday · 8 min read</div>
+        </div>
+        <div class="article-card">
+          <img src="https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=500&q=80" alt="Sports">
+          <div class="category-tag">Sports</div>
+          <h4>Local High School Team Advances to State Championship After Stunning Comeback</h4>
+          <p>Down by 14 at halftime, the Westlake Wolves rallied to defeat perennial champions in overtime.</p>
+          <div class="meta">Carlos Bravo · 10h ago · 3 min read</div>
+        </div>
+      </div>
+
+      <!-- TRENDING (moved from old sidebar) -->
+      <div class="section-header" style="margin-top:32px;">
+        <h2>Trending</h2>
+        <div class="line"></div>
+      </div>
+      <div style="background:var(--black);padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:0;">
+        <div class="trending-item" style="border-bottom:1px solid rgba(255,255,255,0.08);padding:12px 8px;">
+          <div class="trend-num">1</div>
+          <div class="trend-text"><h5>Downtown Revitalization Plan Wins Historic Vote</h5><div class="meta">Local · 8.2K reads</div></div>
+        </div>
+        <div class="trending-item" style="border-bottom:1px solid rgba(255,255,255,0.08);padding:12px 8px;">
+          <div class="trend-num">2</div>
+          <div class="trend-text"><h5>Tech Corridor Draws $600M Investment Wave</h5><div class="meta">Business · 5.1K reads</div></div>
+        </div>
+        <div class="trending-item" style="border-bottom:1px solid rgba(255,255,255,0.08);padding:12px 8px;">
+          <div class="trend-num">3</div>
+          <div class="trend-text"><h5>AI Curriculum Coming to 48 Local Schools</h5><div class="meta">Education · 4.7K reads</div></div>
+        </div>
+        <div class="trending-item" style="border-bottom:1px solid rgba(255,255,255,0.08);padding:12px 8px;">
+          <div class="trend-num">4</div>
+          <div class="trend-text"><h5>City Beats Carbon Goals Eight Months Early</h5><div class="meta">Environment · 3.9K reads</div></div>
+        </div>
+        <div class="trending-item" style="padding:12px 8px;grid-column:1/-1;">
+          <div class="trend-num">5</div>
+          <div class="trend-text"><h5>Heritage Arts Festival Sets Attendance Record</h5><div class="meta">Culture · 3.2K reads</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT RAIL: Calendar → Events → Announcements -->
+    <div class="cal-right-col">
+
+      <!-- MINI CALENDAR -->
+      <div class="section-header">
+        <h2>Events Calendar</h2>
+        <div class="line"></div>
+      </div>
+      <div class="mini-calendar">
+        <div class="cal-month-header">
+          <button class="cal-nav">‹</button>
+          <h3>March 2026</h3>
+          <button class="cal-nav">›</button>
+        </div>
+        <div class="cal-days-header">
+          <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+        </div>
+        <div class="cal-days" id="calDays"></div>
+      </div>
+
+      <!-- EVENTS LIST (below calendar) -->
+      <div class="events-list" style="margin-top:24px;">
+        <h4>Upcoming Events · March 2026</h4>
+        <div class="event-item">
+          <div class="event-date-box"><div class="day">5</div><div class="month">Mar</div></div>
+          <div class="event-info">
+            <h5>City Symphony Orchestra — Beethoven Night</h5>
+            <div class="event-meta">🕖 7:00 PM · Civic Auditorium · Tickets from $18</div>
+            <p>An evening celebrating Beethoven's Ninth Symphony's 200th anniversary.</p>
+          </div>
+        </div>
+        <div class="event-item">
+          <div class="event-date-box"><div class="day">8</div><div class="month">Mar</div></div>
+          <div class="event-info">
+            <h5>International Women's Day March & Rally</h5>
+            <div class="event-meta">🕑 2:00 PM · City Hall Plaza · Free Entry</div>
+            <p>Annual gathering celebrating women's achievements and advocating for gender equity.</p>
+          </div>
+        </div>
+        <div class="event-item">
+          <div class="event-date-box"><div class="day">12</div><div class="month">Mar</div></div>
+          <div class="event-info">
+            <h5>Riverside District Zoning Public Hearing</h5>
+            <div class="event-meta">🕡 6:30 PM · City Hall Room 204 · Open to Public</div>
+            <p>Community members can speak for up to 3 minutes each on proposed development changes.</p>
+          </div>
+        </div>
+        <div class="event-item">
+          <div class="event-date-box"><div class="day">15</div><div class="month">Mar</div></div>
+          <div class="event-info">
+            <h5>Annual Heritage Food Market Opens</h5>
+            <div class="event-meta">🕙 10:00 AM · Waterfront Park · Free Admission</div>
+            <p>Over 80 vendors celebrating multicultural culinary heritage every weekend through May.</p>
+          </div>
+        </div>
+        <div class="event-item">
+          <div class="event-date-box"><div class="day">20</div><div class="month">Mar</div></div>
+          <div class="event-info">
+            <h5>City Jobs Fair 2026</h5>
+            <div class="event-meta">🕘 9:00 AM–4:00 PM · Convention Center Hall B · Free</div>
+            <p>Connect with 30+ city departments. Over 200 open positions. On-site résumé review available.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANNOUNCEMENTS (below events) -->
+      <div class="announcements" style="margin-top:24px;">
+        <div class="section-header">
+          <h2>Announcements</h2>
+          <div class="line"></div>
+        </div>
+        <div class="ann-list">
+          <div class="ann-item">
+            <div class="ann-type">📢 Public Notice</div>
+            <h4>Water Main Replacement on Elm & 5th — Road Closure March 10–17</h4>
+            <p>Motorists should expect detours via Oak Avenue. Emergency vehicles will maintain access.</p>
+          </div>
+          <div class="ann-item">
+            <div class="ann-type">🏛️ Government</div>
+            <h4>Public Hearing: Proposed Zoning Changes for Riverside District</h4>
+            <p>March 12, 6:30 PM · City Hall Room 204. All residents are encouraged to attend.</p>
+          </div>
+          <div class="ann-item">
+            <div class="ann-type">🎓 Education</div>
+            <h4>Spring Semester Registration Open for Adult Education Programs</h4>
+            <p>Free courses in digital literacy, ESL, and workforce skills. Enroll at any library branch.</p>
+          </div>
+          <div class="ann-item">
+            <div class="ann-type">🌳 Community</div>
+            <h4>Tree Planting Drive: Help Green 500 City Blocks This Spring</h4>
+            <p>Volunteers needed every Saturday through April. Sign up at parks.city.gov.</p>
+          </div>
+          <div class="ann-item">
+            <div class="ann-type">⚠️ Public Safety</div>
+            <h4>Fire Prevention Inspections Begin March 15 for All Commercial Properties</h4>
+            <p>Property owners will receive 48-hour notice before scheduled inspections.</p>
+          </div>
+          <div class="ann-item">
+            <div class="ann-type">💼 Employment</div>
+            <h4>City Jobs Fair — 200+ Positions Across 30 Departments</h4>
+            <p>March 20, 9 AM–4 PM · Convention Center Hall B. On-site interviews available.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- NEWSLETTER (below announcements) -->
+      <div class="sidebar-widget newsletter" style="margin-top:24px;">
+        <h3>Stay Informed</h3>
+        <p>Get the day's top stories delivered to your inbox every morning at 7 AM.</p>
+        <input type="text" placeholder="Your email address">
+        <button>Subscribe Free</button>
+      </div>
+
+    </div><!-- end cal-right-col -->
+  </div><!-- end cal-grid -->
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <h2>The Daily <span>Herald</span></h2>
+        <p>Serving our community with honest, thorough, and independent journalism since 1884. Your trust is our most valuable asset.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Sections</h4>
+        <a href="#">Local News</a>
+        <a href="#">Politics</a>
+        <a href="#">Business</a>
+        <a href="#">Arts & Culture</a>
+        <a href="#">Sports</a>
+        <a href="#">Opinion</a>
+      </div>
+      <div class="footer-col">
+        <h4>Services</h4>
+        <a href="#">Subscribe</a>
+        <a href="#">PDF Archive</a>
+        <a href="#">Newsletters</a>
+        <a href="#">RSS Feeds</a>
+        <a href="#">Advertise</a>
+        <a href="#">Classifieds</a>
+      </div>
+      <div class="footer-col">
+        <h4>About</h4>
+        <a href="#">Masthead</a>
+        <a href="#">Editorial Standards</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Corrections</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Use</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 The Daily Herald. All rights reserved.</span>
+      <span>Est. 1884 · Vol. CXLII</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Calendar generation
+  const eventDays = [5, 8, 12, 15, 20, 3];
+  const calContainer = document.getElementById('calDays');
+  const today = 3;
+  // March 2026 starts on Sunday (0)
+  const startDay = 0;
+  const daysInMonth = 31;
+  const prevDays = [22,23,24,25,26,27,28];
+
+  for (let i = 0; i < startDay; i++) {
+    const d = document.createElement('div');
+    d.className = 'cal-day other-month';
+    d.textContent = prevDays[prevDays.length - startDay + i];
+    calContainer.appendChild(d);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    let cls = 'cal-day';
+    if (d === today) cls += ' today';
+    if (eventDays.includes(d) && d !== today) cls += ' has-event';
+    el.className = cls;
+    el.textContent = d;
+    calContainer.appendChild(el);
+  }
+  let rem = (startDay + daysInMonth) % 7;
+  if (rem > 0) {
+    for (let d = 1; d <= (7 - rem); d++) {
+      const el = document.createElement('div');
+      el.className = 'cal-day other-month';
+      el.textContent = d;
+      calContainer.appendChild(el);
+    }
+  }
+</script>
+</body>
+</html>

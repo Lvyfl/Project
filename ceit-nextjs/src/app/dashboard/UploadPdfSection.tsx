@@ -34,10 +34,16 @@ export default function UploadPdfSection({
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
   const [thumbPreviewUrl, setThumbPreviewUrl] = useState<string | null>(null);
+  const [generatingThumb, setGeneratingThumb] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [posts, setPosts] = useState<DepartmentPost[]>([]);
+  const [deleteTargetPostId, setDeleteTargetPostId] = useState<string | null>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [showUploadConfirm, setShowUploadConfirm] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<{ title: string; message: string; kind: 'success' | 'error' } | null>(null);
 
   const pdfInfo = useMemo(() => {
     if (!pdfFile) return null;
@@ -70,6 +76,9 @@ export default function UploadPdfSection({
 
   const onSelectPdf = async (file: File | null) => {
     setPdfFile(null);
+    setThumbFile(null);
+    if (thumbPreviewUrl) URL.revokeObjectURL(thumbPreviewUrl);
+    setThumbPreviewUrl(null);
     if (!file) return;
 
     if (file.type !== 'application/pdf') {
@@ -83,6 +92,59 @@ export default function UploadPdfSection({
     }
 
     setPdfFile(file);
+  };
+
+  const generateThumbnailFromFirstPage = async () => {
+    if (!pdfFile) {
+      alert('Please select a PDF file first');
+      return;
+    }
+
+    setGeneratingThumb(true);
+    try {
+      const pdfjs = await import('pdfjs-dist');
+      if (!pdfjs.GlobalWorkerOptions.workerSrc) {
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+      }
+
+      const bytes = await pdfFile.arrayBuffer();
+      const loadingTask = pdfjs.getDocument({ data: bytes });
+      const pdf = await loadingTask.promise;
+      const firstPage = await pdf.getPage(1);
+
+      const viewport = firstPage.getViewport({ scale: 1.5 });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to create canvas context');
+
+      canvas.width = Math.floor(viewport.width);
+      canvas.height = Math.floor(viewport.height);
+
+      await firstPage.render({
+        canvasContext: ctx,
+        viewport,
+      }).promise;
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob((result) => resolve(result), 'image/jpeg', 0.9);
+      });
+      if (!blob) throw new Error('Failed to generate thumbnail image');
+      if (blob.size > 5 * 1024 * 1024) throw new Error('Generated thumbnail is larger than 5MB');
+
+      const generatedThumb = new File(
+        [blob],
+        `${pdfFile.name.replace(/\.pdf$/i, '') || 'pdf'}-thumb.jpg`,
+        { type: 'image/jpeg' }
+      );
+
+      setThumbFile(generatedThumb);
+      if (thumbPreviewUrl) URL.revokeObjectURL(thumbPreviewUrl);
+      setThumbPreviewUrl(URL.createObjectURL(generatedThumb));
+    } catch (e: any) {
+      alert(e?.message || 'Failed to generate thumbnail from PDF');
+    } finally {
+      setGeneratingThumb(false);
+    }
   };
 
   const onSelectThumb = async (file: File | null) => {
@@ -117,18 +179,17 @@ export default function UploadPdfSection({
     setThumbPreviewUrl(null);
   };
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runUpload = async () => {
     if (!caption.trim()) {
-      alert('Document caption is required');
+      setUploadNotice({ title: 'Missing caption', message: 'Document caption is required.', kind: 'error' });
       return;
     }
     if (!pdfFile) {
-      alert('Please select a PDF file');
+      setUploadNotice({ title: 'Missing PDF', message: 'Please select a PDF file.', kind: 'error' });
       return;
     }
     if (!thumbFile) {
-      alert('Please select a thumbnail image');
+      setUploadNotice({ title: 'Missing thumbnail', message: 'Please select a thumbnail image.', kind: 'error' });
       return;
     }
 
@@ -140,15 +201,39 @@ export default function UploadPdfSection({
       fd.append('thumbnailFile', thumbFile);
 
       await postsAPI.uploadDocument(fd);
-      alert('✅ Document uploaded successfully!');
+      setUploadNotice({ title: 'Upload complete', message: '✅ Document uploaded successfully!', kind: 'success' });
       resetForm();
       if (mode === 'full') loadDepartmentPosts();
       onUploaded?.();
     } catch (err: any) {
-      alert(err.response?.data?.error || '❌ Failed to upload document');
+      setUploadNotice({
+        title: 'Upload failed',
+        message: err.response?.data?.error || '❌ Failed to upload document',
+        kind: 'error',
+      });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    if (!caption.trim()) {
+      setUploadNotice({ title: 'Missing caption', message: 'Document caption is required.', kind: 'error' });
+      return;
+    }
+    if (!pdfFile) {
+      setUploadNotice({ title: 'Missing PDF', message: 'Please select a PDF file.', kind: 'error' });
+      return;
+    }
+    if (!thumbFile) {
+      setUploadNotice({ title: 'Missing thumbnail', message: 'Please select a thumbnail image.', kind: 'error' });
+      return;
+    }
+
+    setShowUploadConfirm(true);
   };
 
   const parseImageUrl = (imageUrl?: string | null) => {
@@ -202,14 +287,23 @@ export default function UploadPdfSection({
     }
   };
 
-  const deletePost = async (id: string) => {
-    const ok = window.confirm('Delete this post?');
-    if (!ok) return;
+  const deletePost = (id: string) => {
+    setDeleteTargetPostId(id);
+  };
+
+  const confirmDeletePost = async () => {
+    if (!deleteTargetPostId || deletingPostId) return;
+    const id = deleteTargetPostId;
     try {
+      setDeletingPostId(id);
       await postsAPI.deletePost(id);
+      setDeleteTargetPostId(null);
       loadDepartmentPosts();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to delete post');
+      setDeleteTargetPostId(null);
+      setDeleteErrorMessage(err.response?.data?.error || 'Failed to delete post');
+    } finally {
+      setDeletingPostId(null);
     }
   };
 
@@ -279,6 +373,19 @@ export default function UploadPdfSection({
                 <span>🖼️</span>
                 <span className="text-sm font-semibold">Choose Thumbnail Image</span>
               </label>
+
+              <button
+                type="button"
+                onClick={generateThumbnailFromFirstPage}
+                disabled={!pdfFile || generatingThumb || submitting}
+                className={`mt-2 w-full rounded-xl px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                  d
+                    ? 'bg-orange-500/15 border border-orange-500/30 text-orange-300 hover:bg-orange-500/20'
+                    : 'bg-orange-50 border border-orange-300 text-orange-700 hover:bg-orange-100'
+                }`}
+              >
+                {generatingThumb ? 'Generating preview…' : '✨ Use first PDF page as thumbnail'}
+              </button>
 
               {thumbPreviewUrl && (
                 <div className="mt-2">
@@ -354,7 +461,12 @@ export default function UploadPdfSection({
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{post.caption}</p>
+                      <p
+                        className={`max-w-full overflow-hidden text-sm font-semibold whitespace-pre-wrap ${d ? 'text-white' : 'text-gray-900'}`}
+                        style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      >
+                        {post.caption}
+                      </p>
                       <p className={`text-xs mt-1 ${d ? 'text-gray-400' : 'text-gray-500'}`}>{formatDateTime(post.createdAt)}</p>
                       {isPdf && (
                         <span className={`inline-flex items-center mt-2 text-[10px] px-2 py-1 rounded-full font-bold ${d ? 'bg-blue-500/10 border border-blue-500/20 text-blue-300' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>
@@ -392,6 +504,107 @@ export default function UploadPdfSection({
           </div>
         )}
       </div>
+      )}
+
+      {deleteTargetPostId && (
+        <div className="fixed inset-0 z-[60] bg-zinc-900/75 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setDeleteTargetPostId(null)}>
+          <div className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-zinc-900 border border-orange-500/25' : 'bg-white border border-orange-200 shadow-sm'}`} onClick={(e) => e.stopPropagation()}>
+            <h4 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Delete Post</h4>
+            <p className={`mt-2 text-sm ${d ? 'text-orange-100/80' : 'text-gray-600'}`}>
+              Delete this post? This action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTargetPostId(null)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${d ? 'text-gray-300 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
+                disabled={deletingPostId === deleteTargetPostId}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeletePost}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={deletingPostId === deleteTargetPostId}
+              >
+                {deletingPostId === deleteTargetPostId ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteErrorMessage && (
+        <div className="fixed inset-0 z-[61] bg-zinc-900/75 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setDeleteErrorMessage(null)}>
+          <div className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-zinc-900 border border-orange-500/25' : 'bg-white border border-orange-200 shadow-sm'}`} onClick={(e) => e.stopPropagation()}>
+            <h4 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Delete failed</h4>
+            <p className={`mt-2 text-sm ${d ? 'text-orange-100/80' : 'text-gray-600'}`}>{deleteErrorMessage}</p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteErrorMessage(null)}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-orange-600 hover:bg-orange-700 text-white"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUploadConfirm && (
+        <div className="fixed inset-0 z-[62] bg-zinc-900/75 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => !submitting && setShowUploadConfirm(false)}>
+          <div className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-zinc-900 border border-orange-500/25' : 'bg-white border border-orange-200 shadow-sm'}`} onClick={(e) => e.stopPropagation()}>
+            <h4 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>Confirm Upload</h4>
+            <p className={`mt-2 text-sm ${d ? 'text-orange-100/80' : 'text-gray-600'}`}>
+              Upload this PDF document now?
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowUploadConfirm(false)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${d ? 'text-gray-300 hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowUploadConfirm(false);
+                  await runUpload();
+                }}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-orange-600 hover:bg-orange-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={submitting}
+              >
+                {submitting ? 'Uploading...' : 'Confirm Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {uploadNotice && (
+        <div className="fixed inset-0 z-[63] bg-zinc-900/75 backdrop-blur-sm flex items-center justify-center p-6" onClick={() => setUploadNotice(null)}>
+          <div className={`w-full max-w-md rounded-2xl p-6 ${d ? 'bg-zinc-900 border border-orange-500/25' : 'bg-white border border-orange-200 shadow-sm'}`} onClick={(e) => e.stopPropagation()}>
+            <h4 className={`text-lg font-semibold ${d ? 'text-white' : 'text-gray-900'}`}>{uploadNotice.title}</h4>
+            <p className={`mt-2 text-sm ${uploadNotice.kind === 'success' ? (d ? 'text-emerald-300' : 'text-emerald-700') : (d ? 'text-orange-100/80' : 'text-gray-600')}`}>
+              {uploadNotice.message}
+            </p>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setUploadNotice(null)}
+                className={`px-4 py-2.5 rounded-xl text-sm font-semibold text-white ${uploadNotice.kind === 'success' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-orange-600 hover:bg-orange-700'}`}
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

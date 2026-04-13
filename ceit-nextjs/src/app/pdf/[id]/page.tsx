@@ -1,12 +1,14 @@
 import Link from 'next/link';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 export default async function PdfPreviewPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const pdfUrl = `http://localhost:3001/documents/${encodeURIComponent(id)}`;
+  const pdfUrl = `${API_BASE}/documents/${encodeURIComponent(id)}`;
 
   return (
     <div className="min-h-screen flex flex-col">
