@@ -911,13 +911,15 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => { openCreatePostModal(); }}
-                className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${c.primaryBtn} flex items-center gap-2`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                New Post
-              </button>
+              {activeTab !== 'announcements' && activeTab !== 'uploadPdf' && activeTab !== 'backgrounds' && (
+                <button
+                  onClick={() => { openCreatePostModal(); }}
+                  className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${c.primaryBtn} flex items-center gap-2`}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  New Post
+                </button>
+              )}
               <div className="relative" ref={userMenuRef}>
                 <button
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}

@@ -255,6 +255,23 @@ useEffect(() => {
               ))}
 
               <div className="ml-auto flex items-center gap-2 relative" ref={filterRef}>
+                {/* Kiosk Mode Button (only on viewer page) */}
+                {currentPage === 'viewer' && (
+                  <Link href="/kiosk">
+                    <button
+                      className="text-[#C4C4C4] hover:text-[#E85D04] transition-colors border border-[#2a2a2a] hover:border-[#E85D04] py-[6px] px-3"
+                      style={{
+                        fontFamily: "var(--font-oswald, Oswald, sans-serif)",
+                        fontSize: '12px',
+                        letterSpacing: '1.5px',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Kiosk Mode
+                    </button>
+                  </Link>
+                )}
+
                 {/* Theme toggle */}
                 <div className="flex items-center border border-[#2a2a2a]">
                   <button

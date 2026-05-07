@@ -363,6 +363,31 @@ export default function KioskPage() {
               </span>
             </button>
           )}
+          {/* Exit Kiosk button */}
+          <Link href="/viewer">
+            <button
+              onClick={(e) => e.stopPropagation()}
+              title="Exit Kiosk Mode"
+              style={{
+                background: 'none',
+                border: `1px solid ${border}`,
+                color: txt,
+                fontSize: '1.8vh',
+                cursor: 'pointer',
+                padding: '0.4vh 0.8vw',
+                borderRadius: '6px',
+                display: 'flex', alignItems: 'center', gap: '0.5vw',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = `${accent}22`; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; }}
+            >
+              <span>⬅️</span>
+              <span style={{ fontSize: '1.1vh', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                Exit
+              </span>
+            </button>
+          </Link>
           {/* Live refresh dot */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6vw' }}>
             <span style={{
