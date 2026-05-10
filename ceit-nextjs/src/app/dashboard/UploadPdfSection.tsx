@@ -122,6 +122,7 @@ export default function UploadPdfSection({
 
       await firstPage.render({
         canvasContext: ctx,
+        canvas: canvas,
         viewport,
       }).promise;
 
