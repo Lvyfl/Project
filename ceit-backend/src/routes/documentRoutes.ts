@@ -4,6 +4,7 @@ import { pool } from '../db';
 import { authenticateToken } from '../middleware/authMiddleware';
 import fs from 'fs';
 import path from 'path';
+import { put } from '@vercel/blob';
 
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get('/', async (req, res) => {
 			: 0;
 
 		const result = await pool.query(
-			`SELECT id, filename, mimetype, size, created_at
+			`SELECT id, filename, mimetype, size, url, created_at
 			 FROM pdf_documents
 			 ORDER BY created_at DESC
 			 LIMIT $1 OFFSET $2`,
@@ -64,9 +65,13 @@ router.post('/upload', authenticateToken, upload.single('pdfFile'), async (req, 
 			return res.status(400).json({ error: 'Please upload a valid PDF file' });
 		}
 
+		const blob = await put(`${Date.now()}-${file.originalname}`, file.buffer, {
+			access: 'public',
+		});
+
 		const result = await pool.query(
-			'INSERT INTO pdf_documents (filename, mimetype, size, data) VALUES ($1, $2, $3, $4) RETURNING id, filename, mimetype, size, created_at',
-			[file.originalname, file.mimetype, file.size, file.buffer]
+			'INSERT INTO pdf_documents (filename, mimetype, size, url) VALUES ($1, $2, $3, $4) RETURNING id, filename, mimetype, size, url, created_at',
+			[file.originalname, file.mimetype, file.size, blob.url]
 		);
 
 		return res.status(201).json(result.rows[0]);
@@ -87,7 +92,7 @@ router.get('/:id/meta', async (req, res) => {
 		if (!id) return res.status(400).json({ error: 'Document id is required' });
 
 		const result = await pool.query(
-			'SELECT id, filename, mimetype, size, created_at FROM pdf_documents WHERE id = $1',
+			'SELECT id, filename, mimetype, size, url, created_at FROM pdf_documents WHERE id = $1',
 			[id]
 		);
 
@@ -111,23 +116,16 @@ router.get('/:id', async (req, res) => {
 		const id = String(req.params.id || '').trim();
 		if (!id) return res.status(400).json({ error: 'Document id is required' });
 
-		const cachedPath = path.join(pdfCacheDir, `${id}.pdf`);
-		if (fs.existsSync(cachedPath)) {
-			res.setHeader('Content-Type', 'application/pdf');
-			res.setHeader('Content-Disposition', 'inline');
-			return fs.createReadStream(cachedPath).pipe(res);
-		}
-
-		const meta = await pool.query(
-			'SELECT filename, mimetype, size FROM pdf_documents WHERE id = $1',
+		const result = await pool.query(
+			'SELECT filename, mimetype, size, url FROM pdf_documents WHERE id = $1',
 			[id]
 		);
 
-		if (meta.rows.length === 0) {
+		if (result.rows.length === 0) {
 			return res.status(404).json({ error: 'PDF not found' });
 		}
 
-		const doc = meta.rows[0] as { filename: string; mimetype: string; size: number };
+		const doc = result.rows[0] as { filename: string; mimetype: string; size: number; url: string };
 
 		const safeName = String(doc.filename || 'document.pdf')
 			.replace(/\r|\n/g, ' ')
@@ -140,59 +138,8 @@ router.get('/:id', async (req, res) => {
 			res.setHeader('Content-Length', String(doc.size));
 		}
 
-		(res as any).flushHeaders?.();
-		res.status(200);
-
-		const tmpPath = path.join(pdfCacheDir, `${id}.tmp`);
-		const cacheStream = fs.createWriteStream(tmpPath);
-		const cleanupTemp = async () => {
-			try {
-				cacheStream.close();
-			} catch {
-			}
-			try {
-				if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
-			} catch {
-			}
-		};
-
-		res.on('close', () => {
-			cleanupTemp();
-		});
-
-		const CHUNK_SIZE = 1024 * 1024;
-		const total = Math.max(0, Number(doc.size) || 0);
-
-		for (let offset = 1; offset <= total; offset += CHUNK_SIZE) {
-			const len = Math.min(CHUNK_SIZE, total - offset + 1);
-			const chunkRes = await pool.query(
-				'SELECT substring(data from $2 for $3) AS chunk FROM pdf_documents WHERE id = $1',
-				[id, offset, len]
-			);
-			const chunkVal = chunkRes.rows?.[0]?.chunk as unknown;
-			let chunk: Buffer;
-			if (Buffer.isBuffer(chunkVal)) {
-				chunk = chunkVal;
-			} else if (typeof chunkVal === 'string') {
-				chunk = chunkVal.startsWith('\\x') ? Buffer.from(chunkVal.slice(2), 'hex') : Buffer.from(chunkVal, 'binary');
-			} else {
-				return res.end();
-			}
-			if (chunk.length > 0) {
-				cacheStream.write(chunk);
-				const ok = res.write(chunk);
-				if (!ok) {
-					await new Promise<void>((resolve) => res.once('drain', () => resolve()));
-				}
-			}
-		}
-
-		cacheStream.end();
-		try {
-			fs.renameSync(tmpPath, cachedPath);
-		} catch {
-		}
-		return res.end();
+		// Redirect to blob URL
+		res.redirect(doc.url);
 	} catch (error: any) {
 		if (error?.code === '42P01') {
 			return res.status(500).json({

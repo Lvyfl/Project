@@ -1,4 +1,4 @@
--- Migration: store uploaded PDFs in Postgres (BYTEA)
+-- Migration: store uploaded PDFs in Vercel Blob
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS "pdf_documents" (
   "filename" text NOT NULL,
   "mimetype" text NOT NULL,
   "size" integer NOT NULL,
-  "data" bytea NOT NULL,
+  "url" text NOT NULL,
   "created_at" timestamp DEFAULT now() NOT NULL
 );
 

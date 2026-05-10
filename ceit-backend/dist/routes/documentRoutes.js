@@ -9,6 +9,7 @@ const db_1 = require("../db");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const blob_1 = require("@vercel/blob");
 const router = (0, express_1.Router)();
 const pdfCacheDir = path_1.default.join(__dirname, '../../uploads/pdf-cache');
 if (!fs_1.default.existsSync(pdfCacheDir)) {
@@ -36,7 +37,7 @@ router.get('/', async (req, res) => {
         const offset = Number.isFinite(rawOffset)
             ? Math.max(0, Math.trunc(rawOffset))
             : 0;
-        const result = await db_1.pool.query(`SELECT id, filename, mimetype, size, created_at
+        const result = await db_1.pool.query(`SELECT id, filename, mimetype, size, url, created_at
 			 FROM pdf_documents
 			 ORDER BY created_at DESC
 			 LIMIT $1 OFFSET $2`, [limit, offset]);
@@ -60,7 +61,10 @@ router.post('/upload', authMiddleware_1.authenticateToken, upload.single('pdfFil
         if (file.mimetype !== 'application/pdf') {
             return res.status(400).json({ error: 'Please upload a valid PDF file' });
         }
-        const result = await db_1.pool.query('INSERT INTO pdf_documents (filename, mimetype, size, data) VALUES ($1, $2, $3, $4) RETURNING id, filename, mimetype, size, created_at', [file.originalname, file.mimetype, file.size, file.buffer]);
+        const blob = await (0, blob_1.put)(`${Date.now()}-${file.originalname}`, file.buffer, {
+            access: 'public',
+        });
+        const result = await db_1.pool.query('INSERT INTO pdf_documents (filename, mimetype, size, url) VALUES ($1, $2, $3, $4) RETURNING id, filename, mimetype, size, url, created_at', [file.originalname, file.mimetype, file.size, blob.url]);
         return res.status(201).json(result.rows[0]);
     }
     catch (error) {
@@ -78,7 +82,7 @@ router.get('/:id/meta', async (req, res) => {
         const id = String(req.params.id || '').trim();
         if (!id)
             return res.status(400).json({ error: 'Document id is required' });
-        const result = await db_1.pool.query('SELECT id, filename, mimetype, size, created_at FROM pdf_documents WHERE id = $1', [id]);
+        const result = await db_1.pool.query('SELECT id, filename, mimetype, size, url, created_at FROM pdf_documents WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'PDF not found' });
         }
@@ -99,17 +103,11 @@ router.get('/:id', async (req, res) => {
         const id = String(req.params.id || '').trim();
         if (!id)
             return res.status(400).json({ error: 'Document id is required' });
-        const cachedPath = path_1.default.join(pdfCacheDir, `${id}.pdf`);
-        if (fs_1.default.existsSync(cachedPath)) {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', 'inline');
-            return fs_1.default.createReadStream(cachedPath).pipe(res);
-        }
-        const meta = await db_1.pool.query('SELECT filename, mimetype, size FROM pdf_documents WHERE id = $1', [id]);
-        if (meta.rows.length === 0) {
+        const result = await db_1.pool.query('SELECT filename, mimetype, size, url FROM pdf_documents WHERE id = $1', [id]);
+        if (result.rows.length === 0) {
             return res.status(404).json({ error: 'PDF not found' });
         }
-        const doc = meta.rows[0];
+        const doc = result.rows[0];
         const safeName = String(doc.filename || 'document.pdf')
             .replace(/\r|\n/g, ' ')
             .replace(/"/g, "'")
@@ -119,57 +117,8 @@ router.get('/:id', async (req, res) => {
         if (typeof doc.size === 'number' && doc.size >= 0) {
             res.setHeader('Content-Length', String(doc.size));
         }
-        res.flushHeaders?.();
-        res.status(200);
-        const tmpPath = path_1.default.join(pdfCacheDir, `${id}.tmp`);
-        const cacheStream = fs_1.default.createWriteStream(tmpPath);
-        const cleanupTemp = async () => {
-            try {
-                cacheStream.close();
-            }
-            catch {
-            }
-            try {
-                if (fs_1.default.existsSync(tmpPath))
-                    fs_1.default.unlinkSync(tmpPath);
-            }
-            catch {
-            }
-        };
-        res.on('close', () => {
-            cleanupTemp();
-        });
-        const CHUNK_SIZE = 1024 * 1024;
-        const total = Math.max(0, Number(doc.size) || 0);
-        for (let offset = 1; offset <= total; offset += CHUNK_SIZE) {
-            const len = Math.min(CHUNK_SIZE, total - offset + 1);
-            const chunkRes = await db_1.pool.query('SELECT substring(data from $2 for $3) AS chunk FROM pdf_documents WHERE id = $1', [id, offset, len]);
-            const chunkVal = chunkRes.rows?.[0]?.chunk;
-            let chunk;
-            if (Buffer.isBuffer(chunkVal)) {
-                chunk = chunkVal;
-            }
-            else if (typeof chunkVal === 'string') {
-                chunk = chunkVal.startsWith('\\x') ? Buffer.from(chunkVal.slice(2), 'hex') : Buffer.from(chunkVal, 'binary');
-            }
-            else {
-                return res.end();
-            }
-            if (chunk.length > 0) {
-                cacheStream.write(chunk);
-                const ok = res.write(chunk);
-                if (!ok) {
-                    await new Promise((resolve) => res.once('drain', () => resolve()));
-                }
-            }
-        }
-        cacheStream.end();
-        try {
-            fs_1.default.renameSync(tmpPath, cachedPath);
-        }
-        catch {
-        }
-        return res.end();
+        // Redirect to blob URL
+        res.redirect(doc.url);
     }
     catch (error) {
         if (error?.code === '42P01') {
