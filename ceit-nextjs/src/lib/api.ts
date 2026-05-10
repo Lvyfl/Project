@@ -129,3 +129,14 @@ export const backgroundsAPI = {
   deactivateAll: () => api.put('/backgrounds/deactivate-all'),
   delete: (id: string) => api.delete(`/backgrounds/${id}`),
 };
+
+export const musicAPI = {
+  list: () => api.get('/music'),
+  getActive: () => api.get('/music/active'),
+  upload: (formData: FormData) =>
+    api.post('/music/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  activate: (id: string) => api.put(`/music/${id}/activate`),
+  updateVolume: (id: string, volume: number) => api.put(`/music/${id}/volume`, { volume }),
+  deactivateAll: () => api.put('/music/deactivate-all'),
+  delete: (id: string) => api.delete(`/music/${id}`),
+};

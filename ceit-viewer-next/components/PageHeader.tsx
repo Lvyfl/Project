@@ -157,8 +157,8 @@ useEffect(() => {
                 letterSpacing: '0.5px',
               }}
             >
-              <span>◆&nbsp;&nbsp;CvSU CEIT Bulletin — Truth, Excellence, and Service</span>
-              <span>◆&nbsp;&nbsp;CvSU CEIT Bulletin — Truth, Excellence, and Service</span>
+              <span>◆&nbsp;&nbsp;CvSU CEIT Announcement — Truth, Excellence, and Service</span>
+              <span>◆&nbsp;&nbsp;CvSU CEIT Announcement — Truth, Excellence, and Service</span>
             </div>
           </div>
         </div>
@@ -207,7 +207,7 @@ useEffect(() => {
                   }}
                   className={d ? 'text-white' : 'text-[#0D0D0D]'}
                 >
-                  CvSU CEIT <span className="text-[#E85D04]">BULLETIN</span>
+                  CvSU CEIT <span className="text-[#E85D04]">ANNOUNCEMENT</span>
                 </h1>
                 <div
                   className={`mt-2 py-1 border-t border-b ${

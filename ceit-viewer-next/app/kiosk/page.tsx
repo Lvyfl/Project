@@ -28,6 +28,15 @@ type CalendarEvent = {
   adminName?: string;
 };
 
+type MusicTrack = {
+  id: string;
+  filename: string;
+  file_url: string;
+  is_active: boolean;
+  volume: number;
+  created_at: string;
+};
+
 /* ───────────────────────── helpers ─────────────────────────── */
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -83,6 +92,7 @@ export default function KioskPage() {
   /* ── data state ── */
   const [posts,  setPosts]  = useState<Post[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [activeMusic, setActiveMusic] = useState<MusicTrack | null>(null);
   const [loading, setLoading] = useState(true);
 
   /* ── clock ── */
@@ -106,20 +116,52 @@ export default function KioskPage() {
       const params = new URLSearchParams({ limit: '30' });
       if (paramDept) params.set('departmentId', paramDept);
 
-      const [postsRes, eventsRes] = await Promise.allSettled([
+      const [postsRes, eventsRes, musicRes] = await Promise.allSettled([
         fetch(`${API_BASE}/posts/public?${params}`),
         fetch(`${API_BASE}/events/public?startDate=${new Date().toISOString()}`),
+        fetch(`${API_BASE}/music/active`),
       ]);
 
       if (postsRes.status === 'fulfilled' && postsRes.value.ok)
         setPosts(await postsRes.value.json() as Post[]);
       if (eventsRes.status === 'fulfilled' && eventsRes.value.ok)
         setEvents(await eventsRes.value.json() as CalendarEvent[]);
+      if (musicRes.status === 'fulfilled' && musicRes.value.ok)
+        setActiveMusic(await musicRes.value.json() as MusicTrack | null);
     } catch { /* silently ignore */ }
     setLoading(false);
   }, [paramDept]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  /* ── poll for music changes ── */
+  useEffect(() => {
+    const pollMusic = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/music/active`);
+        if (res.ok) {
+          const music = await res.json() as MusicTrack | null;
+          setActiveMusic(prev => {
+            // Only update if the music actually changed
+            if (!prev && !music) return prev;
+            if (!prev || !music) return music;
+            // Check if any relevant fields changed
+            const changed = prev.id !== music.id || 
+                           prev.volume !== music.volume || 
+                           prev.file_url !== music.file_url ||
+                           prev.is_active !== music.is_active;
+            return changed ? music : prev;
+          });
+        }
+      } catch { /* silently ignore */ }
+    };
+    // Start polling after initial load
+    const timeoutId = setTimeout(() => {
+      const interval = setInterval(pollMusic, 5000);
+      return () => clearInterval(interval);
+    }, 2000); // Wait 2 seconds after initial load before starting polling
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   /* ── auto-refresh (reload page) ── */
   useEffect(() => {
@@ -204,27 +246,59 @@ export default function KioskPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [musicMuted, setMusicMuted] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
+  const currentMusicRef = useRef<{ url: string; volume: number } | null>(null);
 
   useEffect(() => {
-    if (!paramMusic) return;
-    const audio = new Audio(paramMusic);
-    audio.loop = true;
-    audio.volume = 0.35;
-    audioRef.current = audio;
-    setMusicReady(true);
-    // Attempt autoplay immediately; browsers may block until a gesture
-    audio.play().catch(() => {
-      // Autoplay blocked — retry on first user interaction
-      const onGesture = () => {
-        audio.play().catch(() => {});
-        window.removeEventListener('click', onGesture);
-        window.removeEventListener('keydown', onGesture);
-      };
-      window.addEventListener('click', onGesture);
-      window.addEventListener('keydown', onGesture);
-    });
-    return () => { audio.pause(); audio.src = ''; };
-  }, [paramMusic]);
+    const musicUrl = activeMusic?.file_url || paramMusic;
+    const musicVolume = activeMusic?.volume ?? 0.35;
+
+    // Check if music actually changed
+    const musicChanged = !currentMusicRef.current || 
+                        currentMusicRef.current.url !== musicUrl || 
+                        currentMusicRef.current.volume !== musicVolume;
+
+    if (!musicChanged) return;
+
+    // Update ref
+    currentMusicRef.current = { url: musicUrl, volume: musicVolume };
+
+    if (!musicUrl) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+        audioRef.current = null;
+        setMusicReady(false);
+      }
+      return;
+    }
+
+    // Create or update audio
+    if (!audioRef.current || audioRef.current.src !== musicUrl) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = '';
+      }
+      const audio = new Audio(musicUrl);
+      audio.loop = true;
+      audio.volume = musicVolume;
+      audioRef.current = audio;
+      setMusicReady(true);
+      // Attempt autoplay immediately; browsers may block until a gesture
+      audio.play().catch(() => {
+        // Autoplay blocked — retry on first user interaction
+        const onGesture = () => {
+          audio.play().catch(() => {});
+          window.removeEventListener('click', onGesture);
+          window.removeEventListener('keydown', onGesture);
+        };
+        window.addEventListener('click', onGesture);
+        window.addEventListener('keydown', onGesture);
+      });
+    } else if (audioRef.current) {
+      // Only update volume
+      audioRef.current.volume = musicVolume;
+    }
+  }, [activeMusic?.file_url, activeMusic?.volume, paramMusic]);
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -397,10 +471,19 @@ export default function KioskPage() {
             }} />
             <span style={{ fontSize: '1.2vh', color: muted, letterSpacing: '1px', textTransform: 'uppercase' }}>Live</span>
           </div>
+          
           {/* Clock */}
+          <div style={{ width: '1px', height: '3vh', background: border }} />
           <div style={{
-            fontSize: '3.8vh', fontWeight: 600, letterSpacing: '2px',
-            color: accent, lineHeight: 1,
+            fontSize: '4.8vh', fontWeight: 600, letterSpacing: '2px',
+            color: accent, lineHeight: 1, // Stable sizing
+            minWidth: '12ch',
+            whiteSpace: 'nowrap',
+            textAlign: 'right',
+            flexShrink: 0,
+            fontFamily: "Compacta Web, 'Compacta', sans-serif",
+            // Prevent digit shifting
+            fontVariantNumeric: 'tabular-nums',
           }}>
             {now ? fmtTime(now) : '--:--:-- --'}
           </div>

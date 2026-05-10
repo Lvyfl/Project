@@ -9,6 +9,7 @@ import { postsAPI } from '@/lib/api';
 import CalendarSection from './CalendarSection';
 import UploadPdfSection from './UploadPdfSection';
 import UploadBackgroundSection from './UploadBackgroundSection';
+import UploadMusicSection from './UploadMusicSection';
 import AccountManagementSection from './AccountManagementSection';
 import AdminAccountsPieChart from './AdminAccountsPieChart';
 
@@ -843,6 +844,13 @@ export default function DashboardPage() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
               ),
             },
+            {
+              key: 'music',
+              label: 'Upload Music',
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+              ),
+            },
             ...(user?.isMasterAdmin ? [{
               key: 'accounts',
               label: 'Accounts',
@@ -899,6 +907,7 @@ export default function DashboardPage() {
                 {activeTab === 'announcements' && 'Announcements'}
                 {activeTab === 'uploadPdf' && 'Upload PDF'}
                 {activeTab === 'backgrounds' && 'Viewer Backgrounds'}
+                {activeTab === 'music' && 'Upload Music'}
                 {activeTab === 'accounts' && 'Account Management'}
               </h2>
               <p className={`${c.textMuted} text-sm mt-0.5`}>
@@ -907,11 +916,12 @@ export default function DashboardPage() {
                 {activeTab === 'announcements' && 'Manage events and calendar'}
                 {activeTab === 'uploadPdf' && 'Upload and manage PDF documents'}
                 {activeTab === 'backgrounds' && 'Manage the viewer page background image'}
+                {activeTab === 'music' && 'Manage background music for the kiosk'}
                 {activeTab === 'accounts' && 'Create and remove admin accounts'}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {activeTab !== 'announcements' && activeTab !== 'uploadPdf' && activeTab !== 'backgrounds' && (
+              {activeTab !== 'announcements' && activeTab !== 'uploadPdf' && activeTab !== 'backgrounds' && activeTab !== 'music' && (
                 <button
                   onClick={() => { openCreatePostModal(); }}
                   className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${c.primaryBtn} flex items-center gap-2`}
@@ -1469,6 +1479,10 @@ export default function DashboardPage() {
 
           {activeTab === 'backgrounds' && (
             <UploadBackgroundSection />
+          )}
+
+          {activeTab === 'music' && (
+            <UploadMusicSection />
           )}
 
           {activeTab === 'accounts' && user?.isMasterAdmin && (
