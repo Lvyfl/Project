@@ -41,6 +41,12 @@ app.get('/', (req, res) => {
   res.json({ message: 'CEIT Admin Portal API is running' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
+// For Vercel serverless deployment
+export default app;
+
+// Local development
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+  });
+}
