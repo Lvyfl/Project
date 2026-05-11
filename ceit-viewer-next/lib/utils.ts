@@ -2,21 +2,26 @@
  * Shared utilities for ceit-viewer-next.
  */
 
-function trimSlash(s: string) {
-  return s.replace(/\/$/, '');
-}
+import {
+  shouldProxyInsteadOfPublicApiUrl,
+  trimApiBaseSlash,
+} from './apiBasePolicy';
 
 /**
  * Base URL for JSON/API fetches from the browser.
- * - Uses NEXT_PUBLIC_API_URL when it points at a different host than the viewer.
- * - If unset, or wrongly set to this same deployment (common on Vercel), uses
- *   same-origin `/ceit-api` (see next.config.ts rewrites → BACKEND_URL).
+ * - Uses NEXT_PUBLIC_API_URL when it is a non-Vercel host and differs from the viewer (e.g. Railway).
+ * - Never follows NEXT_PUBLIC_API_URL to another *.vercel.app (usually another Next viewer) — uses
+ *   same-origin `/ceit-api` instead (see next.config.ts rewrites → BACKEND_URL).
+ * - Opt out: NEXT_PUBLIC_TRUST_VERCEL_API_URL=1 if your API truly lives on vercel.app.
  */
 export function getApiBase(): string {
-  const env = trimSlash((process.env.NEXT_PUBLIC_API_URL || '').trim());
+  const env = trimApiBaseSlash((process.env.NEXT_PUBLIC_API_URL || '').trim());
 
   if (typeof window !== 'undefined') {
     const here = window.location.origin;
+    if (env && shouldProxyInsteadOfPublicApiUrl(env)) {
+      return `${here}/ceit-api`;
+    }
     if (env) {
       try {
         const envUrl =
@@ -37,7 +42,7 @@ export function getApiBase(): string {
 
 /** @deprecated Prefer getApiBase() in client code — module-level URL is wrong after hydration when using /ceit-api. */
 export const API_BASE =
-  trimSlash((process.env.NEXT_PUBLIC_API_URL || '').trim()) || 'http://localhost:3000';
+  trimApiBaseSlash((process.env.NEXT_PUBLIC_API_URL || '').trim()) || 'http://localhost:3000';
 
 /**
  * Turn API-relative or root-relative media paths into absolute URLs the browser can load.

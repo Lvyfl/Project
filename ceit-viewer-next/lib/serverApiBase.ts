@@ -1,24 +1,28 @@
 import { headers } from 'next/headers';
-
-function trimSlash(s: string) {
-  return s.replace(/\/$/, '');
-}
+import {
+  shouldProxyInsteadOfPublicApiUrl,
+  trimApiBaseSlash,
+} from './apiBasePolicy';
 
 /**
  * API base URL for Server Components (iframe src, etc.).
- * If NEXT_PUBLIC_API_URL points at this same deployment, use same-origin `/ceit-api` proxy.
+ * Same rules as getApiBase(): never treat another *.vercel.app env URL as the API.
  */
 export async function getServerApiBase(): Promise<string> {
-  const env = trimSlash((process.env.NEXT_PUBLIC_API_URL || '').trim());
+  const env = trimApiBaseSlash((process.env.NEXT_PUBLIC_API_URL || '').trim());
   let here = '';
   try {
     const h = await headers();
     const host = h.get('x-forwarded-host') || h.get('host');
     const proto =
       (h.get('x-forwarded-proto') || 'https').split(',')[0]?.trim() || 'https';
-    if (host) here = trimSlash(`${proto}://${host}`);
+    if (host) here = trimApiBaseSlash(`${proto}://${host}`);
   } catch {
     /* headers() outside a request */
+  }
+
+  if (env && here && shouldProxyInsteadOfPublicApiUrl(env)) {
+    return `${here}/ceit-api`;
   }
 
   if (env && here) {
