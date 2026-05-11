@@ -9,6 +9,39 @@ const db_1 = require("../db");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const blob_1 = require("@vercel/blob");
 const router = (0, express_1.Router)();
+let pdfDocColsCache = null;
+async function getPdfDocCols() {
+    if (pdfDocColsCache)
+        return pdfDocColsCache;
+    const r = await db_1.pool.query(`SELECT column_name
+		 FROM information_schema.columns
+		 WHERE table_schema = current_schema()
+		   AND table_name = 'pdf_documents'`);
+    if (r.rows.length === 0) {
+        const err = new Error('MISSING_TABLE');
+        err.code = '42P01';
+        throw err;
+    }
+    const names = new Set(r.rows.map((x) => x.column_name));
+    const hasUrl = names.has('url');
+    const hasData = names.has('data');
+    if (!hasUrl && !hasData) {
+        throw new Error('pdf_documents must have a url and/or data column');
+    }
+    pdfDocColsCache = { hasUrl, hasData };
+    return pdfDocColsCache;
+}
+function sendPdfBuffer(res, doc) {
+    const safeName = String(doc.filename || 'document.pdf')
+        .replace(/\r|\n/g, ' ')
+        .replace(/"/g, "'")
+        .slice(0, 180);
+    const buf = Buffer.isBuffer(doc.data) ? doc.data : Buffer.from(doc.data);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
+    res.setHeader('Content-Length', String(buf.length));
+    res.send(buf);
+}
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: {
@@ -31,18 +64,25 @@ router.get('/', async (req, res) => {
         const offset = Number.isFinite(rawOffset)
             ? Math.max(0, Math.trunc(rawOffset))
             : 0;
-        const result = await db_1.pool.query(`SELECT id, filename, mimetype, size, url, created_at
-			 FROM pdf_documents
-			 ORDER BY created_at DESC
-			 LIMIT $1 OFFSET $2`, [limit, offset]);
+        const cols = await getPdfDocCols();
+        const result = cols.hasUrl
+            ? await db_1.pool.query(`SELECT id, filename, mimetype, size, url, created_at
+					 FROM pdf_documents
+					 ORDER BY created_at DESC
+					 LIMIT $1 OFFSET $2`, [limit, offset])
+            : await db_1.pool.query(`SELECT id, filename, mimetype, size, NULL::text AS url, created_at
+					 FROM pdf_documents
+					 ORDER BY created_at DESC
+					 LIMIT $1 OFFSET $2`, [limit, offset]);
         return res.status(200).json(result.rows);
     }
     catch (error) {
-        if (error?.code === '42P01') {
+        if (error?.code === '42P01' || error?.message === 'MISSING_TABLE') {
             return res.status(500).json({
                 error: 'Database table pdf_documents does not exist. Run drizzle/0001_pdf_documents.sql then retry.',
             });
         }
+        console.error('GET /documents list error:', error);
         const message = error?.message || 'Failed to retrieve uploaded documents';
         return res.status(500).json({ error: message });
     }
@@ -76,18 +116,22 @@ router.get('/:id/meta', async (req, res) => {
         const id = String(req.params.id || '').trim();
         if (!id)
             return res.status(400).json({ error: 'Document id is required' });
-        const result = await db_1.pool.query('SELECT id, filename, mimetype, size, url, created_at FROM pdf_documents WHERE id = $1', [id]);
+        const cols = await getPdfDocCols();
+        const result = cols.hasUrl
+            ? await db_1.pool.query('SELECT id, filename, mimetype, size, url, created_at FROM pdf_documents WHERE id = $1', [id])
+            : await db_1.pool.query('SELECT id, filename, mimetype, size, NULL::text AS url, created_at FROM pdf_documents WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'PDF not found' });
         }
         return res.status(200).json(result.rows[0]);
     }
     catch (error) {
-        if (error?.code === '42P01') {
+        if (error?.code === '42P01' || error?.message === 'MISSING_TABLE') {
             return res.status(500).json({
                 error: 'Database table pdf_documents does not exist. Run drizzle/0001_pdf_documents.sql then retry.',
             });
         }
+        console.error('GET /documents/:id/meta error:', error);
         const message = error?.message || 'Failed to retrieve PDF metadata';
         return res.status(500).json({ error: message });
     }
@@ -97,29 +141,55 @@ router.get('/:id', async (req, res) => {
         const id = String(req.params.id || '').trim();
         if (!id)
             return res.status(400).json({ error: 'Document id is required' });
-        const result = await db_1.pool.query('SELECT filename, mimetype, size, url FROM pdf_documents WHERE id = $1', [id]);
+        const cols = await getPdfDocCols();
+        if (cols.hasUrl && cols.hasData) {
+            const result = await db_1.pool.query('SELECT filename, mimetype, size, url, data FROM pdf_documents WHERE id = $1', [id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'PDF not found' });
+            }
+            const row = result.rows[0];
+            const blobUrl = row.url && String(row.url).trim();
+            if (blobUrl) {
+                return res.redirect(blobUrl);
+            }
+            if (row.data && row.data.length > 0) {
+                return sendPdfBuffer(res, {
+                    filename: row.filename,
+                    mimetype: row.mimetype,
+                    size: row.size,
+                    data: row.data,
+                });
+            }
+            return res.status(404).json({ error: 'PDF not found' });
+        }
+        if (cols.hasUrl) {
+            const result = await db_1.pool.query('SELECT filename, mimetype, size, url FROM pdf_documents WHERE id = $1', [id]);
+            if (result.rows.length === 0) {
+                return res.status(404).json({ error: 'PDF not found' });
+            }
+            const doc = result.rows[0];
+            if (!doc.url || !String(doc.url).trim()) {
+                return res.status(404).json({ error: 'PDF not found' });
+            }
+            return res.redirect(doc.url);
+        }
+        const result = await db_1.pool.query('SELECT filename, mimetype, size, data FROM pdf_documents WHERE id = $1', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'PDF not found' });
         }
         const doc = result.rows[0];
-        const safeName = String(doc.filename || 'document.pdf')
-            .replace(/\r|\n/g, ' ')
-            .replace(/"/g, "'")
-            .slice(0, 180);
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
-        if (typeof doc.size === 'number' && doc.size >= 0) {
-            res.setHeader('Content-Length', String(doc.size));
+        if (!doc.data || !doc.data.length) {
+            return res.status(404).json({ error: 'PDF not found' });
         }
-        // Redirect to blob URL
-        res.redirect(doc.url);
+        return sendPdfBuffer(res, doc);
     }
     catch (error) {
-        if (error?.code === '42P01') {
+        if (error?.code === '42P01' || error?.message === 'MISSING_TABLE') {
             return res.status(500).json({
                 error: 'Database table pdf_documents does not exist. Run drizzle/0001_pdf_documents.sql then retry.',
             });
         }
+        console.error('GET /documents/:id error:', error);
         const message = error?.message || 'Failed to retrieve PDF';
         return res.status(500).json({ error: message });
     }
