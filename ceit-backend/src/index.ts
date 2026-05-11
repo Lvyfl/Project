@@ -14,6 +14,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Behind Render / other reverse proxies: correct req.protocol and req.ip for absolute URLs (e.g. post images).
+app.set('trust proxy', 1);
+
 // CORS configuration with error handling
 const corsOptions = {
   origin: true,

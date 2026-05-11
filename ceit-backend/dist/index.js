@@ -16,6 +16,8 @@ const musicRoutes_1 = __importDefault(require("./routes/musicRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
+// Behind Render / other reverse proxies: correct req.protocol and req.ip for absolute URLs (e.g. post images).
+app.set('trust proxy', 1);
 // CORS configuration with error handling
 const corsOptions = {
     origin: true,

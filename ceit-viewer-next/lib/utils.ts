@@ -57,7 +57,18 @@ export function resolveApiMediaUrl(url: string, apiBase: string): string {
     return `${proto}${url}`;
   }
   if (url.startsWith('/')) return `${base}${url}`;
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) {
+    // Stale absolute URL from an old deploy / XAMPP — same path should hit the configured API (Render or /api/ceit proxy).
+    try {
+      const p = new URL(url);
+      if (p.pathname.startsWith('/uploads/')) {
+        return `${base}${p.pathname}${p.search}${p.hash}`;
+      }
+    } catch {
+      /* fall through */
+    }
+    return url;
+  }
   return `${base}/${url.replace(/^\//, '')}`;
 }
 

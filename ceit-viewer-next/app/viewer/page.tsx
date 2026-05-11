@@ -533,12 +533,13 @@ export default function ViewerPage() {
                             className={`flex flex-col overflow-hidden rounded-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${d ? 'bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#E85D04]/40' : 'bg-white border border-[#e0e0e0] hover:border-[#E85D04]/50 shadow-sm'}`}>
                             <div className="relative overflow-hidden cursor-zoom-in group flex-shrink-0" style={{ height: '185px' }}
                               onClick={() => displayImg && setImageModalSrc(displayImg)}>
+                              <div className={`absolute inset-0 flex items-center justify-center text-4xl ${d ? 'bg-[#222]' : 'bg-[#f0ede8]'}`}>📰</div>
                               {displayImg ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={displayImg} alt="" loading="lazy" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className={`w-full h-full flex items-center justify-center text-4xl ${d ? 'bg-[#222]' : 'bg-[#f0ede8]'}`}>📰</div>
-                              )}
+                                <img src={displayImg} alt="" loading="lazy"
+                                  className="absolute inset-0 z-10 w-full h-full object-cover"
+                                  onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+                              ) : null}
                               {displayImgs.length > 1 && (
                                 <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium pointer-events-none">
                                   <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

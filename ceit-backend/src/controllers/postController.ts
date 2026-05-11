@@ -4,8 +4,8 @@ import { posts, users, departments, postLikes, postViews } from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 
-/** Public list payload limit per post media field (legacy rows may store base64 or long JSON). */
-const MAX_LIST_MEDIA_BYTES = 524288;
+/** Public list payload limit per post media field (align with single-post cap so previews are not blanked). */
+const MAX_LIST_MEDIA_BYTES = 2 * 1024 * 1024;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function parseDataUrl(dataUrl: string) {
@@ -252,16 +252,47 @@ export const getPostById = async (req: Request, res: Response) => {
 	}
 };
 
+function trimTrailingSlash(s: string) {
+	return s.replace(/\/$/, '');
+}
+
+/**
+ * Canonical public origin for rewriting stored media URLs (avoids http/host mismatches behind proxies).
+ * Set PUBLIC_API_BASE on Render if needed; RENDER_EXTERNAL_URL is provided by Render automatically.
+ */
+function getPublicApiBase(req: Request): string {
+	const raw = (process.env.PUBLIC_API_BASE || process.env.RENDER_EXTERNAL_URL || '').trim();
+	if (raw) {
+		const withProto =
+			raw.startsWith('http://') || raw.startsWith('https://') ? raw : `https://${raw}`;
+		return trimTrailingSlash(withProto);
+	}
+	const host = req.get('host') || 'localhost';
+	const proto = (req.get('x-forwarded-proto') as string)?.split(',')[0]?.trim() || req.protocol;
+	const safeProto = proto === 'https' || proto === 'http' ? proto : 'https';
+	return trimTrailingSlash(`${safeProto}://${host}`);
+}
+
 function buildPublicMediaRewriter(req: Request) {
-	const reqBase = `${req.protocol}://${req.get('host')}`.replace(/\/$/, '');
+	const reqBase = getPublicApiBase(req);
 	const rewriteOne = (url: string): string => {
 		if (!url) return '';
 		if (url.startsWith('data:') || url.startsWith('blob:')) return url;
 		let u = url.replace(/https?:\/\/localhost:\d+/gi, reqBase);
 		u = u.replace(/https?:\/\/127\.0\.0\.1:\d+/gi, reqBase);
-		if (u.startsWith('//')) return `${req.protocol}:${u}`;
+		if (u.startsWith('//')) return `${reqBase.startsWith('https') ? 'https' : 'http'}:${u}`;
 		if (u.startsWith('/')) return `${reqBase}${u}`;
 		if (!/^https?:\/\//i.test(u)) return `${reqBase}/${u.replace(/^\//, '')}`;
+		// Same /uploads path on a stale host (old XAMPP / preview URL) → current API origin so the browser hits Render.
+		try {
+			const parsed = new URL(u);
+			if (parsed.pathname.startsWith('/uploads/')) {
+				const origin = new URL(reqBase).origin;
+				return `${origin}${parsed.pathname}${parsed.search}${parsed.hash}`;
+			}
+		} catch {
+			/* keep u */
+		}
 		return u;
 	};
 	return (raw: string | null | undefined): string => {
