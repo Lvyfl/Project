@@ -1,25 +1,8 @@
 import type { NextConfig } from "next";
 
-function isVercelDeploymentUrl(u: string): boolean {
-  if (!u) return false;
-  try {
-    const host = new URL(
-      u.startsWith("http://") || u.startsWith("https://") ? u : `https://${u}`,
-    ).hostname.toLowerCase();
-    return host.endsWith(".vercel.app") || host === "vercel.app";
-  } catch {
-    return true;
-  }
-}
-
-const rawBack = (process.env.BACKEND_URL || "").trim().replace(/\/$/, "");
-const rawPub = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/$/, "");
 /**
- * Proxy target for /ceit-api/* — prefer BACKEND_URL.
- * If only NEXT_PUBLIC_API_URL is set and it is a real API host (not *.vercel.app), use it so one env works.
+ * API proxy: `/api/ceit/*` → `app/api/ceit/[[...path]]/route.ts` (BACKEND_URL / NEXT_PUBLIC_API_URL on the server).
  */
-const backend = rawBack || (!isVercelDeploymentUrl(rawPub) ? rawPub : "");
-
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -29,17 +12,13 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: '**' },
     ],
   },
-  async rewrites() {
-    if (!backend) return [];
-    return [
-      {
-        source: "/ceit-api/:path*",
-        destination: `${backend}/:path*`,
-      },
-    ];
-  },
   async redirects() {
     return [
+      {
+        source: '/ceit-api/:path*',
+        destination: '/api/ceit/:path*',
+        permanent: false,
+      },
       {
         source: '/viewer.html',
         destination: '/viewer',

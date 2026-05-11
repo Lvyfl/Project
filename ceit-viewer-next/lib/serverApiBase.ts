@@ -22,20 +22,20 @@ export async function getServerApiBase(): Promise<string> {
   }
 
   if (env && here && shouldProxyInsteadOfPublicApiUrl(env)) {
-    return `${here}/ceit-api`;
+    return `${here}/api/ceit`;
   }
 
   if (env && here) {
     try {
       const envUrl = env.startsWith('http://') || env.startsWith('https://') ? env : `https://${env}`;
       if (new URL(envUrl).origin === new URL(here).origin) {
-        return `${here}/ceit-api`;
+        return `${here}/api/ceit`;
       }
     } catch {
       /* keep env */
     }
   }
   if (env) return env;
-  if (here) return `${here}/ceit-api`;
+  if (here) return `${here}/api/ceit`;
   return 'http://localhost:3000';
 }

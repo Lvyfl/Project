@@ -13,7 +13,7 @@ export function isVercelDeploymentHost(hostname: string): boolean {
 }
 
 /**
- * When true, NEXT_PUBLIC_API_URL must not be used as the direct API origin — use same-origin /ceit-api proxy.
+ * When true, NEXT_PUBLIC_API_URL must not be used as the direct API origin — use same-origin /api/ceit proxy.
  * Prevents: production viewer on ceit-*.vercel.app but env points at announcement-*.vercel.app (another Next app).
  */
 export function shouldProxyInsteadOfPublicApiUrl(env: string): boolean {

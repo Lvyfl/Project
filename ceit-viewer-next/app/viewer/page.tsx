@@ -325,10 +325,6 @@ export default function ViewerPage() {
     return () => clearInterval(id);
   }, [deptGroups.length]);
 
-  const todayStr = useMemo(() =>
-    new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
-  , []);
-
   const tickerItems = useMemo(() => {
     const items: string[] = [];
     posts.slice(0, 8).forEach(p => { if (p.caption) items.push(p.caption.slice(0, 100)); });
@@ -366,7 +362,6 @@ export default function ViewerPage() {
           setShowFilter(false);
         }}
         showFilter={showFilter}
-        todayStr={todayStr}
       />
 
       {/* ── PAGE ── */}

@@ -11,7 +11,7 @@ import {
  * Base URL for JSON/API fetches from the browser.
  * - Uses NEXT_PUBLIC_API_URL when it is a non-Vercel host and differs from the viewer (e.g. Railway).
  * - Never follows NEXT_PUBLIC_API_URL to another *.vercel.app (usually another Next viewer) — uses
- *   same-origin `/ceit-api` instead (see next.config.ts rewrites → BACKEND_URL).
+ *   same-origin `/api/ceit` proxy (see app/api/ceit/[[...path]]/route.ts + BACKEND_URL on the server).
  * - Opt out: NEXT_PUBLIC_TRUST_VERCEL_API_URL=1 if your API truly lives on vercel.app.
  */
 export function getApiBase(): string {
@@ -20,7 +20,7 @@ export function getApiBase(): string {
   if (typeof window !== 'undefined') {
     const here = window.location.origin;
     if (env && shouldProxyInsteadOfPublicApiUrl(env)) {
-      return `${here}/ceit-api`;
+      return `${here}/api/ceit`;
     }
     if (env) {
       try {
@@ -33,14 +33,14 @@ export function getApiBase(): string {
         return env;
       }
     }
-    return `${here}/ceit-api`;
+    return `${here}/api/ceit`;
   }
 
   if (env) return env;
   return 'http://localhost:3000';
 }
 
-/** @deprecated Prefer getApiBase() in client code — module-level URL is wrong after hydration when using /ceit-api. */
+/** @deprecated Prefer getApiBase() in client code — module-level URL is wrong after hydration when using /api/ceit. */
 export const API_BASE =
   trimApiBaseSlash((process.env.NEXT_PUBLIC_API_URL || '').trim()) || 'http://localhost:3000';
 

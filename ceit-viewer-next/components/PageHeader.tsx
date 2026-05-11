@@ -38,6 +38,25 @@ export default function PageHeader({
   const [showFilter, setShowFilter] = useState(externalShowFilter);
   const filterRef = useRef<HTMLDivElement | null>(null);
 
+  /** Avoid SSR vs client locale/timezone mismatch (React #418). */
+  const [mastheadDate, setMastheadDate] = useState('');
+  useEffect(() => {
+    if (todayStr) {
+      setMastheadDate(todayStr);
+      return;
+    }
+    setMastheadDate(
+      new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      }),
+    );
+  }, [todayStr]);
+
+  const defaultTodayStr = todayStr ?? mastheadDate;
+
   // Handle scroll effect for masthead collapse
 useEffect(() => {
   let lastY = window.scrollY;
@@ -117,15 +136,6 @@ useEffect(() => {
     setShowFilter(false);
   };
 
-  const defaultTodayStr =
-    todayStr ||
-    new Date().toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-
   const navItems = [
     { href: '/viewer', label: 'Home', id: 'viewer' },
     { href: '/events', label: 'Events', id: 'events' },
@@ -190,7 +200,7 @@ useEffect(() => {
                   lineHeight: '1.8',
                 }}
               >
-                {defaultTodayStr}
+                <span suppressHydrationWarning>{defaultTodayStr || '\u00a0'}</span>
                 <br />
                 Cavite State University
                 <br />
