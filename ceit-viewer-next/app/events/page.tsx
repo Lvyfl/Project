@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import { getApiBase } from '@/lib/utils';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -18,8 +19,6 @@ type CalendarEvent = {
   departmentName?: string;
   isAnnouncement?: boolean;
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 export default function EventsPage() {
   const EVENTS_PER_PAGE = 5;
@@ -65,7 +64,7 @@ export default function EventsPage() {
         endDate: endDate.toISOString(),
       });
 
-      const response = await fetch(`${API_BASE}/events/public?${params.toString()}`);
+      const response = await fetch(`${getApiBase()}/events/public?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to load events');
 
       const data = (await response.json()) as CalendarEvent[];
@@ -88,7 +87,7 @@ export default function EventsPage() {
         endDate: endDate.toISOString(),
       });
 
-      const response = await fetch(`${API_BASE}/events/public?${params.toString()}`);
+      const response = await fetch(`${getApiBase()}/events/public?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to load upcoming events');
 
       const data = (await response.json()) as CalendarEvent[];

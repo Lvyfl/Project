@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
-import { resolveApiMediaUrl } from '@/lib/utils';
+import { getApiBase, resolveApiMediaUrl } from '@/lib/utils';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -32,9 +32,7 @@ type CalendarEvent = {
   isAnnouncement?: boolean;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
-const resolveMedia = (url: string) => resolveApiMediaUrl(url, API_BASE);
+const resolveMedia = (url: string) => resolveApiMediaUrl(url, getApiBase());
 const resolveMediaList = (urls: string[]) => urls.map(resolveMedia);
 
 function getOrCreateClientKey(): string {
@@ -49,7 +47,7 @@ function getOrCreateClientKey(): string {
 
 function trackPostView(postId: string) {
   const clientKey = getOrCreateClientKey();
-  fetch(`${API_BASE}/posts/public/${postId}/view`, {
+  fetch(`${getApiBase()}/posts/public/${postId}/view`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ clientKey }),
@@ -61,7 +59,7 @@ function getDocumentId(pdfUrl: string) {
     const u =
       pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')
         ? new URL(pdfUrl)
-        : new URL(pdfUrl, API_BASE);
+        : new URL(pdfUrl, getApiBase());
     const parts = u.pathname.split('/').filter(Boolean);
     const idx = parts.indexOf('documents');
     return idx >= 0 && parts[idx + 1] ? parts[idx + 1] : '';
@@ -131,7 +129,7 @@ export default function ViewerPage() {
   useEffect(() => {
     const fetchBg = async () => {
       try {
-        const res = await fetch(`${API_BASE}/backgrounds/active`);
+        const res = await fetch(`${getApiBase()}/backgrounds/active`);
         if (res.ok) {
           const data = await res.json();
           setBgImageUrl(resolveMedia(data?.image_url || ''));
@@ -171,7 +169,7 @@ export default function ViewerPage() {
         // Fetch only departments that have at least one post (inner join on backend).
         // This ensures the dropdown only shows depts with content, and the IDs
         // returned directly match the departmentId on posts so filtering works correctly.
-        const res = await fetch(`${API_BASE}/posts/public/departments`);
+        const res = await fetch(`${getApiBase()}/posts/public/departments`);
         if (!res.ok) return;
         const data = (await res.json()) as { id: string; name: string }[];
         // Deduplicate by name as a safety net for duplicate DB rows
@@ -194,7 +192,7 @@ export default function ViewerPage() {
     try {
       const params = new URLSearchParams({ limit: '20' });
       if (currentFilter) params.set('departmentId', currentFilter);
-      const response = await fetch(`${API_BASE}/posts/public?${params.toString()}`);
+      const response = await fetch(`${getApiBase()}/posts/public?${params.toString()}`);
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
       const data = (await response.json()) as Post[];
       setPosts(data);
@@ -222,7 +220,7 @@ export default function ViewerPage() {
 
       const params = new URLSearchParams({ startDate: fetchStart.toISOString(), endDate: fetchEnd.toISOString() });
       if (currentFilter) params.set('departmentId', currentFilter);
-      const response = await fetch(`${API_BASE}/events/public?${params.toString()}`);
+      const response = await fetch(`${getApiBase()}/events/public?${params.toString()}`);
       if (!response.ok) throw new Error('Failed to load events');
       const data = (await response.json()) as CalendarEvent[];
 

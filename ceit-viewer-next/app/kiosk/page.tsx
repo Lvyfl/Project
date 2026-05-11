@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { resolveApiMediaUrl } from '@/lib/utils';
+import { getApiBase, resolveApiMediaUrl } from '@/lib/utils';
 
 /* ─────────────────────────── types ─────────────────────────── */
 type Post = {
@@ -39,8 +39,6 @@ type MusicTrack = {
 };
 
 /* ───────────────────────── helpers ─────────────────────────── */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-
 function parsePostImageUrls(imageUrl?: string | null): string[] {
   if (!imageUrl) return [];
   if (imageUrl.startsWith('[')) {
@@ -118,9 +116,9 @@ export default function KioskPage() {
       if (paramDept) params.set('departmentId', paramDept);
 
       const [postsRes, eventsRes, musicRes] = await Promise.allSettled([
-        fetch(`${API_BASE}/posts/public?${params}`),
-        fetch(`${API_BASE}/events/public?startDate=${new Date().toISOString()}`),
-        fetch(`${API_BASE}/music/active`),
+        fetch(`${getApiBase()}/posts/public?${params}`),
+        fetch(`${getApiBase()}/events/public?startDate=${new Date().toISOString()}`),
+        fetch(`${getApiBase()}/music/active`),
       ]);
 
       if (postsRes.status === 'fulfilled' && postsRes.value.ok)
@@ -139,7 +137,7 @@ export default function KioskPage() {
   useEffect(() => {
     const pollMusic = async () => {
       try {
-        const res = await fetch(`${API_BASE}/music/active`);
+        const res = await fetch(`${getApiBase()}/music/active`);
         if (res.ok) {
           const music = await res.json() as MusicTrack | null;
           setActiveMusic(prev => {
@@ -251,7 +249,7 @@ export default function KioskPage() {
 
   useEffect(() => {
     const rawMusic = activeMusic?.file_url || paramMusic;
-    const musicUrl = rawMusic ? resolveApiMediaUrl(rawMusic, API_BASE) : '';
+    const musicUrl = rawMusic ? resolveApiMediaUrl(rawMusic, getApiBase()) : '';
     const musicVolume = activeMusic?.volume ?? 0.35;
 
     // Check if music actually changed
@@ -319,7 +317,7 @@ export default function KioskPage() {
   /* ── derived values ── */
   const hero = heroSlideables[heroIdx] ?? posts[0];
   const heroImgs = hero
-    ? parsePostImageUrls(hero.imageUrl).map((u) => resolveApiMediaUrl(u, API_BASE))
+    ? parsePostImageUrls(hero.imageUrl).map((u) => resolveApiMediaUrl(u, getApiBase()))
     : [];
   const heroImg  = heroImgs[0] ?? '';
 

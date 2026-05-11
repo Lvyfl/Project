@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PdfThumbnail from './PdfThumbnail';
 import PageHeader from '@/components/PageHeader';
+import { getApiBase } from '@/lib/utils';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -15,8 +16,6 @@ type PdfDocument = {
   size: number;
   created_at: string;
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -61,7 +60,7 @@ export default function DocumentsPage() {
     setError('');
     try {
       const offset = (pageNum - 1) * LIMIT;
-      const res = await fetch(`${API_BASE}/documents?limit=${LIMIT + 1}&offset=${offset}`);
+      const res = await fetch(`${getApiBase()}/documents?limit=${LIMIT + 1}&offset=${offset}`);
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
       const data = (await res.json()) as PdfDocument[];
       setHasMore(data.length > LIMIT);
@@ -154,7 +153,7 @@ export default function DocumentsPage() {
         {!loading && documents.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
             {documents.map((doc) => {
-              const pdfUrl = `${API_BASE}/documents/${encodeURIComponent(doc.id)}`;
+              const pdfUrl = `${getApiBase()}/documents/${encodeURIComponent(doc.id)}`;
               const uploadedDate = new Date(doc.created_at).toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'short',

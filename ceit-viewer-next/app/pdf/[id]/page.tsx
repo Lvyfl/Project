@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getServerApiBase } from '@/lib/serverApiBase';
 
 export default async function PdfPreviewPage({
   params,
@@ -6,7 +7,7 @@ export default async function PdfPreviewPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+  const apiBase = await getServerApiBase();
   const pdfUrl = `${apiBase}/documents/${encodeURIComponent(id)}`;
 
   return (
