@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import PdfThumbnail from '@/app/documents/PdfThumbnail';
 import { getApiBase, resolveApiMediaUrl } from '@/lib/utils';
 
 type ThemeMode = 'dark' | 'light';
@@ -55,6 +56,7 @@ function trackPostView(postId: string) {
 }
 
 function getDocumentId(pdfUrl: string) {
+  if (!pdfUrl || pdfUrl === 'PDF_PLACEHOLDER') return '';
   try {
     const u =
       pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')
@@ -66,6 +68,11 @@ function getDocumentId(pdfUrl: string) {
   } catch {
     return '';
   }
+}
+
+/** Same source as Documents page: first page of PDF from API (works when DB has PDF bytes; /uploads thumbs may 404 on Render). */
+function postPdfPreviewUrl(docId: string) {
+  return `${getApiBase()}/documents/${encodeURIComponent(docId)}`;
 }
 
 function parsePdfPost(imageUrl?: string) {
@@ -447,7 +454,7 @@ export default function ViewerPage() {
               );
               const hImg = hImgs[0] || '';
               const hPdfUrlResolved = hPdfUrl ? resolveMedia(hPdfUrl) : '';
-              const hDocId = hPdfUrl ? getDocumentId(hPdfUrl) : '';
+              const hDocId = hPdfUrlResolved ? getDocumentId(hPdfUrlResolved) : '';
               const hDate = new Date(hero.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
               return (
                 <div key={deptName} className="mb-14">
@@ -458,10 +465,21 @@ export default function ViewerPage() {
                     <div className="grid grid-cols-1 md:grid-cols-[2fr_3fr]">
                       {/* image */}
                       <div className="relative overflow-hidden cursor-zoom-in group" style={{ minHeight: '260px' }}
-                        onClick={() => hImg && setImageModalSrc(hImg)}>
-                        {hImg ? (
+                        onClick={() => {
+                          if (hImg) setImageModalSrc(hImg);
+                          else if (hIsPdf && hDocId) {
+                            setPostModalImageIndex(0);
+                            setPostModal(hero);
+                            trackPostView(hero.id);
+                          }
+                        }}>
+                        {hIsPdf && hDocId ? (
+                          <div className="absolute inset-0 z-10 min-h-[260px] w-full overflow-hidden bg-zinc-950">
+                            <PdfThumbnail pdfUrl={postPdfPreviewUrl(hDocId)} dark={d} />
+                          </div>
+                        ) : hImg ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={hImg} alt="" className="absolute inset-0 w-full h-full object-cover"
+                          <img src={hImg} alt="" className="absolute inset-0 z-10 w-full h-full object-cover"
                             onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
                         ) : (
                           <div className={`absolute inset-0 flex items-center justify-center text-5xl ${d ? 'bg-[#222]' : 'bg-[#f0ede8]'}`}>📰</div>
@@ -536,15 +554,26 @@ export default function ViewerPage() {
                         );
                         const displayImg = displayImgs[0] || '';
                         const pdfUrlResolved = pdfUrl ? resolveMedia(pdfUrl) : '';
-                        const docId = pdfUrl ? getDocumentId(pdfUrl) : '';
+                        const docId = pdfUrlResolved ? getDocumentId(pdfUrlResolved) : '';
                         const dateLabel = new Date(post.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                         return (
                           <article key={post.id}
                             className={`flex flex-col overflow-hidden rounded-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${d ? 'bg-[#1a1a1a] border border-[#2a2a2a] hover:border-[#E85D04]/40' : 'bg-white border border-[#e0e0e0] hover:border-[#E85D04]/50 shadow-sm'}`}>
                             <div className="relative overflow-hidden cursor-zoom-in group flex-shrink-0" style={{ height: '185px' }}
-                              onClick={() => displayImg && setImageModalSrc(displayImg)}>
+                              onClick={() => {
+                                if (displayImg) setImageModalSrc(displayImg);
+                                else if (isPdf && docId) {
+                                  setPostModalImageIndex(0);
+                                  setPostModal(post);
+                                  trackPostView(post.id);
+                                }
+                              }}>
                               <div className={`absolute inset-0 flex items-center justify-center text-4xl ${d ? 'bg-[#222]' : 'bg-[#f0ede8]'}`}>📰</div>
-                              {displayImg ? (
+                              {isPdf && docId ? (
+                                <div className="absolute inset-0 z-10 h-full w-full overflow-hidden bg-zinc-950">
+                                  <PdfThumbnail pdfUrl={postPdfPreviewUrl(docId)} dark={d} />
+                                </div>
+                              ) : displayImg ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img src={displayImg} alt="" loading="lazy"
                                   className="absolute inset-0 z-10 w-full h-full object-cover"
@@ -613,7 +642,10 @@ export default function ViewerPage() {
               const idx = spotlightIndex % deptGroups.length;
               const [deptName, deptPosts] = deptGroups[idx];
               const latest = deptPosts[0];
-              const { isPdf, thumbnailUrl } = parsePdfPost(latest?.imageUrl);
+              const spotPdf = parsePdfPost(latest?.imageUrl);
+              const spotPdfResolved = spotPdf.pdfUrl ? resolveMedia(spotPdf.pdfUrl) : '';
+              const spotDocId = spotPdfResolved ? getDocumentId(spotPdfResolved) : '';
+              const { isPdf, thumbnailUrl } = spotPdf;
               const spotImgs = resolveMediaList(
                 isPdf ? (thumbnailUrl ? [thumbnailUrl] : []) : parsePostImageUrls(latest?.imageUrl),
               );
@@ -648,12 +680,16 @@ export default function ViewerPage() {
                     {/* Latest post preview */}
                     {latest && (
                       <div className="flex gap-4 p-4">
-                        {img && (
-                          <div className="w-20 h-20 flex-shrink-0 overflow-hidden">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={img} alt="" className="w-full h-full object-cover" />
+                        {(isPdf && spotDocId) || img ? (
+                          <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-sm bg-zinc-950">
+                            {isPdf && spotDocId ? (
+                              <PdfThumbnail pdfUrl={postPdfPreviewUrl(spotDocId)} dark={d} />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={img} alt="" className="h-full w-full object-cover" />
+                            )}
                           </div>
-                        )}
+                        ) : null}
                         <div className="flex-1 min-w-0">
                           <p className={`text-[13px] font-semibold leading-snug mb-1 line-clamp-3 ${d ? 'text-white' : 'text-[#0D0D0D]'}`}
                             style={{ fontFamily: "var(--font-playfair, 'Playfair Display', serif)" }}>
@@ -934,10 +970,11 @@ export default function ViewerPage() {
         );
         const mImg = mImgs[postModalImageIndex] || '';
         const mPdfUrlResolved = mPdfUrl ? resolveMedia(mPdfUrl) : '';
-        const mDocId = mPdfUrl ? getDocumentId(mPdfUrl) : '';
+        const mDocId = mPdfUrlResolved ? getDocumentId(mPdfUrlResolved) : '';
         const mDate = new Date(postModal.createdAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         const readMins = postModal.body ? Math.max(1, Math.ceil(postModal.body.split(' ').length / 200)) : 1;
-        const hasImage = mImgs.length > 0;
+        const showPdfPreview = mIsPdf && !!mDocId;
+        const hasImage = mImgs.length > 0 || showPdfPreview;
         const hasMultipleImgs = mImgs.length > 1;
         return (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 md:p-10"
@@ -1016,15 +1053,21 @@ export default function ViewerPage() {
                 </div>
               </div>
 
-              {/* ── RIGHT: image (with optional multi-image carousel) ── */}
+              {/* ── RIGHT: image or PDF first-page preview (same as Documents page) ── */}
               {hasImage && (
-                <div className="md:flex-1 h-52 md:h-auto overflow-hidden flex-shrink-0 relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={mImg} alt="" className="w-full h-full object-cover"
-                    style={{ cursor: 'zoom-in' }}
-                    onClick={() => setImageModalSrc(mImg)}
-                    onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
-                  {hasMultipleImgs && (
+                <div className="md:flex-1 h-52 md:h-auto overflow-hidden flex-shrink-0 relative bg-zinc-950">
+                  {showPdfPreview ? (
+                    <div className="h-full min-h-[220px] w-full md:min-h-0">
+                      <PdfThumbnail pdfUrl={postPdfPreviewUrl(mDocId)} dark={d} />
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={mImg} alt="" className="h-full w-full object-cover"
+                      style={{ cursor: 'zoom-in' }}
+                      onClick={() => setImageModalSrc(mImg)}
+                      onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none'; }} />
+                  )}
+                  {!showPdfPreview && hasMultipleImgs && (
                     <>
                       {/* Prev arrow */}
                       <button
