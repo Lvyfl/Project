@@ -72,6 +72,16 @@ export function resolveApiMediaUrl(url: string, apiBase: string): string {
   const base = apiBase.replace(/\/$/, '');
   if (!url) return '';
   if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (/^https?:\/\//i.test(url)) {
+    try {
+      const h = new URL(url).hostname.toLowerCase();
+      if (h.endsWith('.public.blob.vercel-storage.com') || h.endsWith('.blob.vercel-storage.com')) {
+        return url;
+      }
+    } catch {
+      /* continue */
+    }
+  }
   if (url.startsWith('//')) {
     const proto = base.startsWith('https') ? 'https:' : 'http:';
     return `${proto}${url}`;

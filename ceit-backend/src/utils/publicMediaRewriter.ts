@@ -29,8 +29,20 @@ export function buildPublicMediaRewriter(req: Request) {
 	const rewriteOne = (url: string): string => {
 		if (!url) return '';
 		if (url.startsWith('data:') || url.startsWith('blob:')) return url;
-		let u = url.replace(/https?:\/\/localhost:\d+/gi, reqBase);
-		u = u.replace(/https?:\/\/127\.0\.0\.1:\d+/gi, reqBase);
+		// Never mutate Vercel Blob URLs (admin + viewer rely on them as-is).
+		if (/^https?:\/\//i.test(url)) {
+			try {
+				const h = new URL(url).hostname.toLowerCase();
+				if (h.endsWith('.public.blob.vercel-storage.com') || h.endsWith('.blob.vercel-storage.com')) {
+					return url;
+				}
+			} catch {
+				/* continue */
+			}
+		}
+		// Optional port (http://localhost/uploads/...).
+		let u = url.replace(/https?:\/\/localhost(?::\d+)?/gi, reqBase);
+		u = u.replace(/https?:\/\/127\.0\.0\.1(?::\d+)?/gi, reqBase);
 		if (u.startsWith('//')) return `${reqBase.startsWith('https') ? 'https' : 'http'}:${u}`;
 		if (u.startsWith('/')) return `${reqBase}${u}`;
 		if (!/^https?:\/\//i.test(u)) return `${reqBase}/${u.replace(/^\//, '')}`;

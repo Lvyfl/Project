@@ -129,7 +129,13 @@ export const getPosts = async (req: any, res: Response) => {
 			.limit(limit)
 			.offset(offset);
 
-		res.json(departmentPosts);
+		const rewriteMediaField = buildPublicMediaRewriter(req);
+		res.json(
+			departmentPosts.map((p) => ({
+				...p,
+				imageUrl: rewriteMediaField(p.imageUrl),
+			})),
+		);
 	} catch (error: any) {
 		const detail = error?.cause?.message || error?.detail || '';
 		const message = detail ? `${error.message} | ${detail}` : error.message;
@@ -247,7 +253,11 @@ export const getPostById = async (req: Request, res: Response) => {
 		if (!post) {
 			return res.status(404).json({ error: 'Post not found' });
 		}
-		res.json(post);
+		const rewriteMediaField = buildPublicMediaRewriter(req);
+		res.json({
+			...post,
+			imageUrl: rewriteMediaField(post.imageUrl),
+		});
 	} catch (error: any) {
 		res.status(500).json({ error: error.message });
 	}

@@ -126,7 +126,11 @@ const getPosts = async (req, res) => {
             .orderBy((0, drizzle_orm_1.desc)(schema_1.posts.createdAt))
             .limit(limit)
             .offset(offset);
-        res.json(departmentPosts);
+        const rewriteMediaField = (0, publicMediaRewriter_1.buildPublicMediaRewriter)(req);
+        res.json(departmentPosts.map((p) => ({
+            ...p,
+            imageUrl: rewriteMediaField(p.imageUrl),
+        })));
     }
     catch (error) {
         const detail = error?.cause?.message || error?.detail || '';
@@ -225,7 +229,11 @@ const getPostById = async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: 'Post not found' });
         }
-        res.json(post);
+        const rewriteMediaField = (0, publicMediaRewriter_1.buildPublicMediaRewriter)(req);
+        res.json({
+            ...post,
+            imageUrl: rewriteMediaField(post.imageUrl),
+        });
     }
     catch (error) {
         res.status(500).json({ error: error.message });

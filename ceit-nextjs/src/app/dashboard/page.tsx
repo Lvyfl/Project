@@ -188,7 +188,12 @@ function normalizePosts(data: unknown): PostItem[] {
       caption: typeof item.caption === 'string' ? item.caption : String(item.caption ?? ''),
       body: typeof item.body === 'string' ? item.body : undefined,
       category: typeof item.category === 'string' ? item.category : undefined,
-      imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : '',
+      imageUrl:
+        typeof item.imageUrl === 'string'
+          ? item.imageUrl
+          : typeof item.image_url === 'string'
+            ? item.image_url
+            : '',
       createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
       adminId: typeof item.adminId === 'string' ? item.adminId : undefined,
       adminName: typeof item.adminName === 'string' ? item.adminName : undefined,
