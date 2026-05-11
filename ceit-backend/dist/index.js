@@ -26,14 +26,6 @@ const corsOptions = {
 app.use((0, cors_1.default)(corsOptions));
 app.use(express_1.default.json({ limit: '50mb' }));
 app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
-// Error handling middleware for CORS on failed requests
-app.use((err, req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    next(err);
-});
 // No-op endpoint for Chrome DevTools probe to avoid 404 noise.
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
     res.status(204).end();
@@ -49,7 +41,7 @@ app.use('/events', eventRoutes_1.default);
 app.use('/documents', documentRoutes_1.default);
 app.use('/backgrounds', backgroundRoutes_1.default);
 app.use('/music', musicRoutes_1.default);
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
     res.json({ message: 'CEIT Admin Portal API is running' });
 });
 // For Vercel serverless deployment

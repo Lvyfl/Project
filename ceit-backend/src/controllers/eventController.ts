@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { db, pool } from '../db';
 import { events, users, departments } from '../db/schema';
-import { eq, and, gte, lte } from 'drizzle-orm';
+import { eq, and, gte, lte, type SQL } from 'drizzle-orm';
 
 let eventColumnsEnsured = false;
 
@@ -129,7 +129,7 @@ export const getEvents = async (req: any, res: Response) => {
 			.leftJoin(departments, eq(events.departmentId, departments.id))
 			.orderBy(events.eventDate);
 
-		const conditions = [];
+		const conditions: SQL<unknown>[] = [];
 
 		if (!allDepartments || allDepartments === 'false') {
 			conditions.push(eq(events.departmentId, departmentId));
@@ -182,7 +182,7 @@ export const getPublicEvents = async (req: Request, res: Response) => {
 			.leftJoin(departments, eq(events.departmentId, departments.id))
 			.orderBy(events.eventDate);
 
-		const conditions = [];
+		const conditions: SQL<unknown>[] = [];
 		if (departmentId && typeof departmentId === 'string') {
 			conditions.push(eq(events.departmentId, departmentId));
 		}
