@@ -135,6 +135,7 @@ export default function KioskPage() {
 
   /* ── poll for music changes ── */
   useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined;
     const pollMusic = async () => {
       try {
         const res = await fetch(`${getApiBase()}/music/active`);
@@ -154,12 +155,13 @@ export default function KioskPage() {
         }
       } catch { /* silently ignore */ }
     };
-    // Start polling after initial load
     const timeoutId = setTimeout(() => {
-      const interval = setInterval(pollMusic, 5000);
-      return () => clearInterval(interval);
-    }, 2000); // Wait 2 seconds after initial load before starting polling
-    return () => clearTimeout(timeoutId);
+      intervalId = setInterval(pollMusic, 5000);
+    }, 2000);
+    return () => {
+      clearTimeout(timeoutId);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   /* ── auto-refresh (reload page) ── */

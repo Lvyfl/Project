@@ -58,10 +58,17 @@ export function resolveApiMediaUrl(url: string, apiBase: string): string {
   }
   if (url.startsWith('/')) return `${base}${url}`;
   if (/^https?:\/\//i.test(url)) {
-    // Stale absolute URL from an old deploy / XAMPP — same path should hit the configured API (Render or /api/ceit proxy).
     try {
       const p = new URL(url);
-      if (p.pathname.startsWith('/uploads/')) {
+      const host = p.hostname.toLowerCase();
+      // Stale dev URLs → current API (backgrounds/music/posts saved while on XAMPP).
+      if (host === 'localhost' || host === '127.0.0.1') {
+        return `${base}${p.pathname}${p.search}${p.hash}`;
+      }
+      // Re-home /uploads/ only when not on Vercel Blob — blob object keys can legally contain "/uploads/" in the path.
+      const onVercelBlob =
+        host.endsWith('.public.blob.vercel-storage.com') || host.endsWith('.blob.vercel-storage.com');
+      if (!onVercelBlob && p.pathname.startsWith('/uploads/')) {
         return `${base}${p.pathname}${p.search}${p.hash}`;
       }
     } catch {

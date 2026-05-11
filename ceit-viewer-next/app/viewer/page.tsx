@@ -344,7 +344,10 @@ export default function ViewerPage() {
         <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
           <div
             className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{ backgroundImage: `url('${bgImageUrl}')`, opacity: d ? 0.12 : 0.15 }}
+            style={{
+              backgroundImage: `url(${JSON.stringify(bgImageUrl)})`,
+              opacity: d ? 0.12 : 0.15,
+            }}
           />
         </div>
       )}
