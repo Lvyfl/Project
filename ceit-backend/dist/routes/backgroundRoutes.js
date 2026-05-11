@@ -8,6 +8,7 @@ const multer_1 = __importDefault(require("multer"));
 const db_1 = require("../db");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const blob_1 = require("@vercel/blob");
+const publicMediaRewriter_1 = require("../utils/publicMediaRewriter");
 const router = (0, express_1.Router)();
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
@@ -29,7 +30,10 @@ router.get('/active', async (req, res) => {
 			 LIMIT 1`);
         if (result.rows.length === 0)
             return res.json(null);
-        return res.json(result.rows[0]);
+        const row = result.rows[0];
+        const rewrite = (0, publicMediaRewriter_1.buildPublicMediaRewriter)(req);
+        row.image_url = rewrite(row.image_url);
+        return res.json(row);
     }
     catch (error) {
         if (error?.code === '42P01') {

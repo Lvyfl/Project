@@ -3,6 +3,7 @@ import multer from 'multer';
 import { pool } from '../db';
 import { authenticateToken } from '../middleware/authMiddleware';
 import { put } from '@vercel/blob';
+import { buildPublicMediaRewriter } from '../utils/publicMediaRewriter';
 
 const router = Router();
 
@@ -28,7 +29,16 @@ router.get('/active', async (req, res) => {
 			 LIMIT 1`
 		);
 		if (result.rows.length === 0) return res.json(null);
-		return res.json(result.rows[0]);
+		const row = result.rows[0] as {
+			id: string;
+			filename: string;
+			image_url: string | null;
+			is_active: boolean;
+			created_at: Date;
+		};
+		const rewrite = buildPublicMediaRewriter(req);
+		row.image_url = rewrite(row.image_url);
+		return res.json(row);
 	} catch (error: any) {
 		if (error?.code === '42P01') {
 			return res.status(200).json(null);

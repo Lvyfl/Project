@@ -44,6 +44,26 @@ export function getApiBase(): string {
 export const API_BASE =
   trimApiBaseSlash((process.env.NEXT_PUBLIC_API_URL || '').trim()) || 'http://localhost:3000';
 
+function isPrivateOrLocalHostname(host: string): boolean {
+  const h = host.toLowerCase();
+  if (h === 'localhost' || h === '127.0.0.1') return true;
+  if (h.endsWith('.local')) return true;
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+  if (!m) return false;
+  const a = Number(m[1]);
+  const b = Number(m[2]);
+  if (a === 10) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 127) return true;
+  return false;
+}
+
+function isVercelBlobHostname(host: string): boolean {
+  const h = host.toLowerCase();
+  return h.endsWith('.public.blob.vercel-storage.com') || h.endsWith('.blob.vercel-storage.com');
+}
+
 /**
  * Turn API-relative or root-relative media paths into absolute URLs the browser can load.
  * Next.js runs on a different origin than the API, so `/uploads/...` must target the API host.
@@ -61,14 +81,16 @@ export function resolveApiMediaUrl(url: string, apiBase: string): string {
     try {
       const p = new URL(url);
       const host = p.hostname.toLowerCase();
-      // Stale dev URLs → current API (backgrounds/music/posts saved while on XAMPP).
-      if (host === 'localhost' || host === '127.0.0.1') {
+      // XAMPP / LAN / localhost: prefer path from /uploads/ onward; otherwise remap full path to current API.
+      if (isPrivateOrLocalHostname(host)) {
+        const up = p.pathname.indexOf('/uploads/');
+        if (up >= 0) {
+          return `${base}${p.pathname.slice(up)}${p.search}${p.hash}`;
+        }
         return `${base}${p.pathname}${p.search}${p.hash}`;
       }
       // Re-home /uploads/ only when not on Vercel Blob — blob object keys can legally contain "/uploads/" in the path.
-      const onVercelBlob =
-        host.endsWith('.public.blob.vercel-storage.com') || host.endsWith('.blob.vercel-storage.com');
-      if (!onVercelBlob && p.pathname.startsWith('/uploads/')) {
+      if (!isVercelBlobHostname(host) && p.pathname.startsWith('/uploads/')) {
         return `${base}${p.pathname}${p.search}${p.hash}`;
       }
     } catch {

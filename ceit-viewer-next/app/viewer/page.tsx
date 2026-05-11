@@ -131,8 +131,12 @@ export default function ViewerPage() {
       try {
         const res = await fetch(`${getApiBase()}/backgrounds/active`);
         if (res.ok) {
-          const data = await res.json();
-          setBgImageUrl(resolveMedia(data?.image_url || ''));
+          const data = (await res.json()) as {
+            image_url?: string | null;
+            imageUrl?: string | null;
+          } | null;
+          const raw = data?.image_url ?? data?.imageUrl ?? '';
+          setBgImageUrl(resolveMedia(typeof raw === 'string' ? raw : ''));
         }
       } catch {
         // silently ignore — background is decorative
@@ -340,17 +344,20 @@ export default function ViewerPage() {
     <div className={`min-h-screen ${bg} ${textColor} relative`} style={{ fontFamily: "var(--font-baskerville, 'Libre Baskerville', Georgia, serif)" }}>
 
       {/* ── VIEWER BACKGROUND ── */}
-      {bgImageUrl && (
+      {bgImageUrl ? (
         <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-          <div
-            className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `url(${JSON.stringify(bgImageUrl)})`,
-              opacity: d ? 0.12 : 0.15,
-            }}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bgImageUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ opacity: d ? 0.12 : 0.15 }}
+            loading="eager"
+            decoding="async"
+            onError={() => setBgImageUrl('')}
           />
         </div>
-      )}
+      ) : null}
 
       {/* ── PAGE HEADER ── */}
       <PageHeader
