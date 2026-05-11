@@ -2,16 +2,9 @@ import { Router } from 'express';
 import multer from 'multer';
 import { pool } from '../db';
 import { authenticateToken } from '../middleware/authMiddleware';
-import fs from 'fs';
-import path from 'path';
 import { put } from '@vercel/blob';
 
 const router = Router();
-
-const pdfCacheDir = path.join(__dirname, '../../uploads/pdf-cache');
-if (!fs.existsSync(pdfCacheDir)) {
-	fs.mkdirSync(pdfCacheDir, { recursive: true });
-}
 
 const upload = multer({
 	storage: multer.memoryStorage(),

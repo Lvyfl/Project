@@ -14,9 +14,26 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// CORS configuration with error handling
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Error handling middleware for CORS on failed requests
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  next(err);
+});
 
 // No-op endpoint for Chrome DevTools probe to avoid 404 noise.
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
@@ -25,9 +42,6 @@ app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
-
-// Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/auth', authRoutes);

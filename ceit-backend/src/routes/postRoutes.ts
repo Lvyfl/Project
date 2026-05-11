@@ -3,7 +3,7 @@ import { createPost, getPosts, updatePost, deletePost, getPublicPosts, getPostBy
 import { authenticateToken } from '../middleware/authMiddleware';
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import { put } from '@vercel/blob';
 import { pool } from '../db';
 
 const router = Router();
@@ -18,11 +18,6 @@ router.post('/public/:id/view', trackPostView);
 router.use(authenticateToken);
 
 router.get('/engagement', getPostEngagement);
-
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-	fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 const upload = multer({
 	storage: multer.memoryStorage(),
@@ -87,18 +82,25 @@ router.post(
 
 			const thumbExt = path.extname(thumb.originalname || '') || '.png';
 			const thumbFileName = safeFileName(thumb.originalname, thumbExt);
-			const thumbFullPath = path.join(uploadsDir, thumbFileName);
-			await fs.promises.writeFile(thumbFullPath, thumb.buffer);
+			
+			let thumbBlob;
+			try {
+				thumbBlob = await put(thumbFileName, thumb.buffer, { access: 'public' });
+			} catch (blobError: any) {
+				console.error('Thumbnail blob upload error:', blobError);
+				return res.status(500).json({ error: `Failed to upload thumbnail: ${blobError.message}` });
+			}
 
 			const baseUrl = `${req.protocol}://${req.get('host')}`;
 			const pdfUrl = `${baseUrl}/documents/${encodeURIComponent(documentId)}`;
-			const thumbUrl = `${baseUrl}/uploads/${encodeURIComponent(thumbFileName)}`;
+			const thumbUrl = thumbBlob.url;
 
 			req.body.imageUrl = `${pdfUrl}|${thumbUrl}`;
 			req.body.caption = caption;
 			return createPost(req, res);
 		} catch (error: any) {
-			return res.status(500).json({ error: error.message });
+			console.error('Post upload error:', error);
+			return res.status(500).json({ error: error.message || 'Failed to create post' });
 		}
 	}
 );

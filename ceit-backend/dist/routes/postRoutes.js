@@ -8,7 +8,7 @@ const postController_1 = require("../controllers/postController");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
+const blob_1 = require("@vercel/blob");
 const db_1 = require("../db");
 const router = (0, express_1.Router)();
 router.get('/public', postController_1.getPublicPosts);
@@ -19,10 +19,6 @@ router.post('/public/:id/like', postController_1.likePublicPost);
 router.post('/public/:id/view', postController_1.trackPostView);
 router.use(authMiddleware_1.authenticateToken);
 router.get('/engagement', postController_1.getPostEngagement);
-const uploadsDir = path_1.default.join(__dirname, '../../uploads');
-if (!fs_1.default.existsSync(uploadsDir)) {
-    fs_1.default.mkdirSync(uploadsDir, { recursive: true });
-}
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: {
@@ -78,17 +74,24 @@ router.post('/upload', upload.fields([
             return res.status(500).json({ error: 'Failed to store PDF in database' });
         const thumbExt = path_1.default.extname(thumb.originalname || '') || '.png';
         const thumbFileName = safeFileName(thumb.originalname, thumbExt);
-        const thumbFullPath = path_1.default.join(uploadsDir, thumbFileName);
-        await fs_1.default.promises.writeFile(thumbFullPath, thumb.buffer);
+        let thumbBlob;
+        try {
+            thumbBlob = await (0, blob_1.put)(thumbFileName, thumb.buffer, { access: 'public' });
+        }
+        catch (blobError) {
+            console.error('Thumbnail blob upload error:', blobError);
+            return res.status(500).json({ error: `Failed to upload thumbnail: ${blobError.message}` });
+        }
         const baseUrl = `${req.protocol}://${req.get('host')}`;
         const pdfUrl = `${baseUrl}/documents/${encodeURIComponent(documentId)}`;
-        const thumbUrl = `${baseUrl}/uploads/${encodeURIComponent(thumbFileName)}`;
+        const thumbUrl = thumbBlob.url;
         req.body.imageUrl = `${pdfUrl}|${thumbUrl}`;
         req.body.caption = caption;
         return (0, postController_1.createPost)(req, res);
     }
     catch (error) {
-        return res.status(500).json({ error: error.message });
+        console.error('Post upload error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to create post' });
     }
 });
 router.post('/', postController_1.createPost);

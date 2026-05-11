@@ -97,11 +97,7 @@ export const postsAPI = {
   getDepartmentPosts: (params?: { limit?: number; offset?: number }) => api.get('/posts', { params }),
   getPostById: (id: string) => api.get(`/posts/${id}`),
   uploadDocument: (formData: FormData) =>
-    api.post('/posts/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    }),
+    api.post('/posts/upload', formData),
   createPost: (data: { caption: string; body?: string; category?: string; imageUrl?: string; imageUrls?: string[] }) =>
     api.post('/posts', data),
   updatePost: (id: string, data: { caption: string; body?: string; category?: string; imageUrl?: string }) =>
@@ -124,7 +120,7 @@ export const backgroundsAPI = {
   list: () => api.get('/backgrounds'),
   getActive: () => api.get('/backgrounds/active'),
   upload: (formData: FormData) =>
-    api.post('/backgrounds/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/backgrounds/upload', formData),
   activate: (id: string) => api.put(`/backgrounds/${id}/activate`),
   deactivateAll: () => api.put('/backgrounds/deactivate-all'),
   delete: (id: string) => api.delete(`/backgrounds/${id}`),
@@ -134,7 +130,7 @@ export const musicAPI = {
   list: () => api.get('/music'),
   getActive: () => api.get('/music/active'),
   upload: (formData: FormData) =>
-    api.post('/music/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    api.post('/music/upload', formData),
   activate: (id: string) => api.put(`/music/${id}/activate`),
   updateVolume: (id: string, volume: number) => api.put(`/music/${id}/volume`, { volume }),
   deactivateAll: () => api.put('/music/deactivate-all'),

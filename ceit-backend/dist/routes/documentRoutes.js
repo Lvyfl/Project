@@ -7,14 +7,8 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const db_1 = require("../db");
 const authMiddleware_1 = require("../middleware/authMiddleware");
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const blob_1 = require("@vercel/blob");
 const router = (0, express_1.Router)();
-const pdfCacheDir = path_1.default.join(__dirname, '../../uploads/pdf-cache');
-if (!fs_1.default.existsSync(pdfCacheDir)) {
-    fs_1.default.mkdirSync(pdfCacheDir, { recursive: true });
-}
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
     limits: {

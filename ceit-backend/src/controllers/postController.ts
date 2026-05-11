@@ -2,17 +2,10 @@ import { Request, Response } from 'express';
 import { db } from '../db';
 import { posts, users, departments, postLikes, postViews } from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
-import path from 'path';
-import fs from 'fs';
-import { promises as fsp } from 'fs';
+import { put } from '@vercel/blob';
 
 const MAX_LIST_MEDIA_BYTES = 20000;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
-
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-	fs.mkdirSync(uploadsDir, { recursive: true });
-}
 
 function parseDataUrl(dataUrl: string) {
 	const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
@@ -36,11 +29,10 @@ function extFromMime(mime: string) {
 	return 'bin';
 }
 
-async function writeUpload(buffer: Buffer, ext: string) {
+async function uploadImageBlob(buffer: Buffer, ext: string) {
 	const fileName = `post_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
-	const fullPath = path.join(uploadsDir, fileName);
-	await fsp.writeFile(fullPath, buffer);
-	return fileName;
+	const blob = await put(fileName, buffer, { access: 'public' });
+	return blob.url;
 }
 
 const listImageUrl = sql<string>`
@@ -77,9 +69,7 @@ export const createPost = async (req: any, res: Response) => {
 					throw new Error('Image is too large. Please upload a smaller image.');
 				}
 				const ext = extFromMime(parsed.mime);
-				const file = await writeUpload(parsed.buffer, ext);
-				const baseUrl = `${req.protocol}://${req.get('host')}`;
-				return `${baseUrl}/uploads/${encodeURIComponent(file)}`;
+				return await uploadImageBlob(parsed.buffer, ext);
 			}
 			return url;
 		};
@@ -162,9 +152,7 @@ export const updatePost = async (req: any, res: Response) => {
 				return res.status(413).json({ error: 'Image is too large. Please upload a smaller image.' });
 			}
 			const ext = extFromMime(parsed.mime);
-			const file = await writeUpload(parsed.buffer, ext);
-			const baseUrl = `${req.protocol}://${req.get('host')}`;
-			imageUrl = `${baseUrl}/uploads/${encodeURIComponent(file)}`;
+			imageUrl = await uploadImageBlob(parsed.buffer, ext);
 		}
 
 		const updated = await db

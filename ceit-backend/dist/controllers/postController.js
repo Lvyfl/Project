@@ -1,21 +1,12 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getPostEngagement = exports.trackPostView = exports.likePublicPost = exports.getPostDepartments = exports.getPostDepartmentCounts = exports.getPublicPosts = exports.getPostById = exports.deletePost = exports.updatePost = exports.getPosts = exports.createPost = void 0;
 const db_1 = require("../db");
 const schema_1 = require("../db/schema");
 const drizzle_orm_1 = require("drizzle-orm");
-const path_1 = __importDefault(require("path"));
-const fs_1 = __importDefault(require("fs"));
-const fs_2 = require("fs");
+const blob_1 = require("@vercel/blob");
 const MAX_LIST_MEDIA_BYTES = 20000;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
-const uploadsDir = path_1.default.join(__dirname, '../../uploads');
-if (!fs_1.default.existsSync(uploadsDir)) {
-    fs_1.default.mkdirSync(uploadsDir, { recursive: true });
-}
 function parseDataUrl(dataUrl) {
     const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
     if (!m)
@@ -42,11 +33,10 @@ function extFromMime(mime) {
         return 'gif';
     return 'bin';
 }
-async function writeUpload(buffer, ext) {
+async function uploadImageBlob(buffer, ext) {
     const fileName = `post_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
-    const fullPath = path_1.default.join(uploadsDir, fileName);
-    await fs_2.promises.writeFile(fullPath, buffer);
-    return fileName;
+    const blob = await (0, blob_1.put)(fileName, buffer, { access: 'public' });
+    return blob.url;
 }
 const listImageUrl = (0, drizzle_orm_1.sql) `
 	CASE
@@ -79,9 +69,7 @@ const createPost = async (req, res) => {
                     throw new Error('Image is too large. Please upload a smaller image.');
                 }
                 const ext = extFromMime(parsed.mime);
-                const file = await writeUpload(parsed.buffer, ext);
-                const baseUrl = `${req.protocol}://${req.get('host')}`;
-                return `${baseUrl}/uploads/${encodeURIComponent(file)}`;
+                return await uploadImageBlob(parsed.buffer, ext);
             }
             return url;
         };
@@ -161,9 +149,7 @@ const updatePost = async (req, res) => {
                 return res.status(413).json({ error: 'Image is too large. Please upload a smaller image.' });
             }
             const ext = extFromMime(parsed.mime);
-            const file = await writeUpload(parsed.buffer, ext);
-            const baseUrl = `${req.protocol}://${req.get('host')}`;
-            imageUrl = `${baseUrl}/uploads/${encodeURIComponent(file)}`;
+            imageUrl = await uploadImageBlob(parsed.buffer, ext);
         }
         const updated = await db_1.db
             .update(schema_1.posts)

@@ -16,17 +16,30 @@ const musicRoutes_1 = __importDefault(require("./routes/musicRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
-app.use((0, cors_1.default)());
-app.use(express_1.default.json({ limit: '10mb' }));
-app.use(express_1.default.urlencoded({ limit: '10mb', extended: true }));
+// CORS configuration with error handling
+const corsOptions = {
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use((0, cors_1.default)(corsOptions));
+app.use(express_1.default.json({ limit: '50mb' }));
+app.use(express_1.default.urlencoded({ limit: '50mb', extended: true }));
+// Error handling middleware for CORS on failed requests
+app.use((err, req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.get('origin') || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    next(err);
+});
 // No-op endpoint for Chrome DevTools probe to avoid 404 noise.
 app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
     res.status(204).end();
 });
 // Serve static files from public directory
 app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
-// Serve uploaded files
-app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Routes
 app.use('/auth', authRoutes_1.default);
 app.use('/posts', postRoutes_1.default);

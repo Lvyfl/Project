@@ -2,24 +2,12 @@ import { Router } from 'express';
 import multer from 'multer';
 import { pool } from '../db';
 import { authenticateToken } from '../middleware/authMiddleware';
-import fs from 'fs';
-import path from 'path';
+import { put } from '@vercel/blob';
 
 const router = Router();
 
-const uploadsDir = path.join(__dirname, '../../uploads/backgrounds');
-if (!fs.existsSync(uploadsDir)) {
-	fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
 const upload = multer({
-	storage: multer.diskStorage({
-		destination: (_req, _file, cb) => cb(null, uploadsDir),
-		filename: (_req, file, cb) => {
-			const ext = path.extname(file.originalname) || '.jpg';
-			cb(null, `bg_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`);
-		},
-	}),
+	storage: multer.memoryStorage(),
 	limits: { fileSize: 10 * 1024 * 1024 },
 	fileFilter: (_req, file, cb) => {
 		if (!file.mimetype.startsWith('image/')) {
@@ -75,19 +63,24 @@ router.post('/upload', authenticateToken, upload.single('bgImage'), async (req, 
 			return res.status(400).json({ error: 'No image file provided' });
 		}
 
-		const baseUrl = `${req.protocol}://${req.get('host')}`;
-		const imageUrl = `${baseUrl}/uploads/backgrounds/${req.file.filename}`;
+		const ext = req.file.originalname.substring(req.file.originalname.lastIndexOf('.'));
+		const blobName = `bg_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
+		
+		const blob = await put(blobName, req.file.buffer, {
+			access: 'public',
+		});
 
 		const result = await pool.query(
 			`INSERT INTO backgrounds (filename, image_url, is_active)
 			 VALUES ($1, $2, FALSE)
 			 RETURNING id, filename, image_url, is_active, created_at`,
-			[req.file.filename, imageUrl]
+			[req.file.originalname, blob.url]
 		);
 
 		return res.status(201).json(result.rows[0]);
 	} catch (error: any) {
-		return res.status(500).json({ error: error.message });
+		console.error('Background upload error:', error);
+		return res.status(500).json({ error: error.message || 'Failed to upload background' });
 	}
 });
 
@@ -122,7 +115,7 @@ router.put('/deactivate-all', authenticateToken, async (req, res) => {
 	}
 });
 
-// DELETE /backgrounds/:id  — delete image + file, auth required
+// DELETE /backgrounds/:id  — delete image record, auth required
 router.delete('/:id', authenticateToken, async (req, res) => {
 	try {
 		const { id } = req.params;
@@ -133,9 +126,6 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 		if (result.rows.length === 0) {
 			return res.status(404).json({ error: 'Background not found' });
 		}
-		// Remove file from disk
-		const filePath = path.join(uploadsDir, result.rows[0].filename);
-		fs.unlink(filePath, () => {}); // ignore errors if already gone
 		return res.json({ ok: true });
 	} catch (error: any) {
 		return res.status(500).json({ error: error.message });
