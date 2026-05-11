@@ -1,6 +1,14 @@
+require('dotenv').config();
 const { Pool } = require('pg');
+
+if (!process.env.DATABASE_URL) {
+  console.error('Set DATABASE_URL (e.g. from .env) before running this script.');
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: 'postgresql://019c4557-da47-767b-97cd-b774998a6987:ef043b68-a1d1-4b43-81b3-781c3b21c87a@us-west-2.db.thenile.dev:5432/ceit_portal'
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
 });
 
 pool.query(
