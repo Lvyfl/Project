@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { resolveApiMediaUrl } from '@/lib/utils';
 
 /* ─────────────────────────── types ─────────────────────────── */
 type Post = {
@@ -249,7 +250,8 @@ export default function KioskPage() {
   const currentMusicRef = useRef<{ url: string; volume: number } | null>(null);
 
   useEffect(() => {
-    const musicUrl = activeMusic?.file_url || paramMusic;
+    const rawMusic = activeMusic?.file_url || paramMusic;
+    const musicUrl = rawMusic ? resolveApiMediaUrl(rawMusic, API_BASE) : '';
     const musicVolume = activeMusic?.volume ?? 0.35;
 
     // Check if music actually changed
@@ -316,7 +318,9 @@ export default function KioskPage() {
 
   /* ── derived values ── */
   const hero = heroSlideables[heroIdx] ?? posts[0];
-  const heroImgs = hero ? parsePostImageUrls(hero.imageUrl) : [];
+  const heroImgs = hero
+    ? parsePostImageUrls(hero.imageUrl).map((u) => resolveApiMediaUrl(u, API_BASE))
+    : [];
   const heroImg  = heroImgs[0] ?? '';
 
   // All future non-announcement events — no cap — used by MiniCalendar so every event date is highlighted

@@ -43,6 +43,9 @@ app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Serve legacy uploads from bundled repo files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/posts', postRoutes);

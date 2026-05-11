@@ -5,7 +5,8 @@ const db_1 = require("../db");
 const schema_1 = require("../db/schema");
 const drizzle_orm_1 = require("drizzle-orm");
 const blob_1 = require("@vercel/blob");
-const MAX_LIST_MEDIA_BYTES = 20000;
+/** Public list payload limit per post media field (legacy rows may store base64 or long JSON). */
+const MAX_LIST_MEDIA_BYTES = 524288;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 function parseDataUrl(dataUrl) {
     const m = /^data:([^;]+);base64,(.*)$/s.exec(dataUrl);
@@ -230,19 +231,57 @@ const getPostById = async (req, res) => {
     }
 };
 exports.getPostById = getPostById;
+function buildPublicMediaRewriter(req) {
+    const reqBase = `${req.protocol}://${req.get('host')}`.replace(/\/$/, '');
+    const rewriteOne = (url) => {
+        if (!url)
+            return '';
+        if (url.startsWith('data:') || url.startsWith('blob:'))
+            return url;
+        let u = url.replace(/https?:\/\/localhost:\d+/gi, reqBase);
+        u = u.replace(/https?:\/\/127\.0\.0\.1:\d+/gi, reqBase);
+        if (u.startsWith('//'))
+            return `${req.protocol}:${u}`;
+        if (u.startsWith('/'))
+            return `${reqBase}${u}`;
+        if (!/^https?:\/\//i.test(u))
+            return `${reqBase}/${u.replace(/^\//, '')}`;
+        return u;
+    };
+    return (raw) => {
+        if (raw == null || raw === '')
+            return raw ?? '';
+        if (raw.startsWith('[')) {
+            try {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    return JSON.stringify(arr.map((item) => (typeof item === 'string' ? rewriteOne(item) : item)));
+                }
+            }
+            catch {
+                /* fall through */
+            }
+        }
+        if (raw.startsWith('PDF_PLACEHOLDER|')) {
+            const thumb = raw.slice('PDF_PLACEHOLDER|'.length);
+            return `PDF_PLACEHOLDER|${rewriteOne(thumb)}`;
+        }
+        if (raw.includes('|')) {
+            const i = raw.indexOf('|');
+            const a = raw.slice(0, i);
+            const b = raw.slice(i + 1);
+            return `${rewriteOne(a)}|${rewriteOne(b)}`;
+        }
+        return rewriteOne(raw);
+    };
+}
 const getPublicPosts = async (req, res) => {
     try {
         const { departmentId } = req.query;
         const rawLimit = parseInt(req.query.limit);
         const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 30) : 20;
         const offset = parseInt(req.query.offset) || 0;
-        const reqBase = `${req.protocol}://${req.get('host')}`;
-        const rewriteUrl = (url) => {
-            if (!url)
-                return url ?? '';
-            // Replace any stored localhost:PORT that differs from current server
-            return url.replace(/https?:\/\/localhost:\d+/g, reqBase);
-        };
+        const rewriteMediaField = buildPublicMediaRewriter(req);
         const query = db_1.db
             .select({
             id: schema_1.posts.id,
@@ -263,7 +302,10 @@ const getPublicPosts = async (req, res) => {
             .orderBy((0, drizzle_orm_1.desc)(schema_1.posts.createdAt))
             .limit(limit)
             .offset(offset);
-        const mapPost = (p) => ({ ...p, imageUrl: rewriteUrl(p.imageUrl) });
+        const mapPost = (p) => ({
+            ...p,
+            imageUrl: rewriteMediaField(p.imageUrl),
+        });
         if (departmentId && typeof departmentId === 'string') {
             const allPosts = await query.where((0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId));
             return res.json(allPosts.map(mapPost));

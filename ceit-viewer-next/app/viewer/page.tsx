@@ -1,9 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import { resolveApiMediaUrl } from '@/lib/utils';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -33,6 +34,9 @@ type CalendarEvent = {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+const resolveMedia = (url: string) => resolveApiMediaUrl(url, API_BASE);
+const resolveMediaList = (urls: string[]) => urls.map(resolveMedia);
+
 function getOrCreateClientKey(): string {
   if (typeof window === 'undefined') return 'ssr';
   let key = localStorage.getItem('ceit_client_key');
@@ -54,7 +58,10 @@ function trackPostView(postId: string) {
 
 function getDocumentId(pdfUrl: string) {
   try {
-    const u = new URL(pdfUrl, typeof window !== 'undefined' ? window.location.origin : API_BASE);
+    const u =
+      pdfUrl.startsWith('http://') || pdfUrl.startsWith('https://')
+        ? new URL(pdfUrl)
+        : new URL(pdfUrl, API_BASE);
     const parts = u.pathname.split('/').filter(Boolean);
     const idx = parts.indexOf('documents');
     return idx >= 0 && parts[idx + 1] ? parts[idx + 1] : '';
@@ -127,7 +134,7 @@ export default function ViewerPage() {
         const res = await fetch(`${API_BASE}/backgrounds/active`);
         if (res.ok) {
           const data = await res.json();
-          setBgImageUrl(data?.image_url || '');
+          setBgImageUrl(resolveMedia(data?.image_url || ''));
         }
       } catch {
         // silently ignore — background is decorative
@@ -432,8 +439,11 @@ export default function ViewerPage() {
               const hero = deptPosts[0];
               const restPosts = deptPosts.slice(1);
               const { isPdf: hIsPdf, pdfUrl: hPdfUrl, thumbnailUrl: hThumb } = parsePdfPost(hero.imageUrl);
-              const hImgs = hIsPdf ? (hThumb ? [hThumb] : []) : parsePostImageUrls(hero.imageUrl);
+              const hImgs = resolveMediaList(
+                hIsPdf ? (hThumb ? [hThumb] : []) : parsePostImageUrls(hero.imageUrl),
+              );
               const hImg = hImgs[0] || '';
+              const hPdfUrlResolved = hPdfUrl ? resolveMedia(hPdfUrl) : '';
               const hDocId = hPdfUrl ? getDocumentId(hPdfUrl) : '';
               const hDate = new Date(hero.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
               return (
@@ -495,7 +505,7 @@ export default function ViewerPage() {
                                 Open PDF <span style={{ fontSize: '16px' }}>›</span>
                               </Link>
                             ) : (
-                              <a href={hPdfUrl} target="_blank" rel="noreferrer"
+                              <a href={hPdfUrlResolved} target="_blank" rel="noreferrer"
                                 className="inline-flex items-center gap-1 font-semibold text-[#E85D04] hover:text-[#F48C06] transition-colors"
                                 style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '13px', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                 Open PDF <span style={{ fontSize: '16px' }}>›</span>
@@ -518,8 +528,11 @@ export default function ViewerPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {restPosts.map((post) => {
                         const { isPdf, pdfUrl, thumbnailUrl } = parsePdfPost(post.imageUrl);
-                        const displayImgs = isPdf ? (thumbnailUrl ? [thumbnailUrl] : []) : parsePostImageUrls(post.imageUrl);
+                        const displayImgs = resolveMediaList(
+                          isPdf ? (thumbnailUrl ? [thumbnailUrl] : []) : parsePostImageUrls(post.imageUrl),
+                        );
                         const displayImg = displayImgs[0] || '';
+                        const pdfUrlResolved = pdfUrl ? resolveMedia(pdfUrl) : '';
                         const docId = pdfUrl ? getDocumentId(pdfUrl) : '';
                         const dateLabel = new Date(post.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
                         return (
@@ -567,7 +580,7 @@ export default function ViewerPage() {
                                       Open PDF <span style={{ fontSize: '14px' }}>›</span>
                                     </Link>
                                   ) : (
-                                    <a href={pdfUrl} target="_blank" rel="noreferrer"
+                                    <a href={pdfUrlResolved} target="_blank" rel="noreferrer"
                                       className="inline-flex items-center gap-1 font-semibold text-[#E85D04] hover:text-[#F48C06] transition-colors"
                                       style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '12px', letterSpacing: '1px', textTransform: 'uppercase' }}>
                                       Open PDF <span style={{ fontSize: '14px' }}>›</span>
@@ -597,7 +610,9 @@ export default function ViewerPage() {
               const [deptName, deptPosts] = deptGroups[idx];
               const latest = deptPosts[0];
               const { isPdf, thumbnailUrl } = parsePdfPost(latest?.imageUrl);
-              const spotImgs = isPdf ? (thumbnailUrl ? [thumbnailUrl] : []) : parsePostImageUrls(latest?.imageUrl);
+              const spotImgs = resolveMediaList(
+                isPdf ? (thumbnailUrl ? [thumbnailUrl] : []) : parsePostImageUrls(latest?.imageUrl),
+              );
               const img = spotImgs[0] || '';
               return (
                 <div className="mb-10">
@@ -910,8 +925,11 @@ export default function ViewerPage() {
       {/* ── POST MODAL ── */}
       {postModal && (() => {
         const { isPdf: mIsPdf, pdfUrl: mPdfUrl, thumbnailUrl: mThumb } = parsePdfPost(postModal.imageUrl);
-        const mImgs = mIsPdf ? (mThumb ? [mThumb] : []) : parsePostImageUrls(postModal.imageUrl);
+        const mImgs = resolveMediaList(
+          mIsPdf ? (mThumb ? [mThumb] : []) : parsePostImageUrls(postModal.imageUrl),
+        );
         const mImg = mImgs[postModalImageIndex] || '';
+        const mPdfUrlResolved = mPdfUrl ? resolveMedia(mPdfUrl) : '';
         const mDocId = mPdfUrl ? getDocumentId(mPdfUrl) : '';
         const mDate = new Date(postModal.createdAt).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
         const readMins = postModal.body ? Math.max(1, Math.ceil(postModal.body.split(' ').length / 200)) : 1;
@@ -973,7 +991,7 @@ export default function ViewerPage() {
                           📄 Open PDF Document
                         </Link>
                       ) : (
-                        <a href={mPdfUrl} target="_blank" rel="noreferrer"
+                        <a href={mPdfUrlResolved} target="_blank" rel="noreferrer"
                           className="inline-flex items-center gap-2 bg-[#E85D04] hover:bg-[#c94e00] text-white px-5 py-2.5 transition-colors"
                           style={{ fontFamily: "var(--font-oswald, Oswald, sans-serif)", fontSize: '11px', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 600 }}>
                           📄 Open PDF Document

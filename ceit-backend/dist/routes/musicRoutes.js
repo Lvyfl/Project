@@ -11,7 +11,7 @@ const blob_1 = require("@vercel/blob");
 const router = (0, express_1.Router)();
 const upload = (0, multer_1.default)({
     storage: multer_1.default.memoryStorage(),
-    limits: { fileSize: 50 * 1024 * 1024 },
+    limits: { fileSize: 200 * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
         if (!file.mimetype.startsWith('audio/')) {
             return cb(new Error('Only audio files are allowed'));

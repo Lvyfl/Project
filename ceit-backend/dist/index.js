@@ -40,6 +40,8 @@ app.get('/.well-known/appspecific/com.chrome.devtools.json', (_req, res) => {
 });
 // Serve static files from public directory
 app.use(express_1.default.static(path_1.default.join(__dirname, '../public')));
+// Serve legacy uploads from bundled repo files
+app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
 // Routes
 app.use('/auth', authRoutes_1.default);
 app.use('/posts', postRoutes_1.default);

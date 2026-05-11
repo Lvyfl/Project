@@ -4,7 +4,8 @@ import { posts, users, departments, postLikes, postViews } from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 
-const MAX_LIST_MEDIA_BYTES = 20000;
+/** Public list payload limit per post media field (legacy rows may store base64 or long JSON). */
+const MAX_LIST_MEDIA_BYTES = 524288;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 function parseDataUrl(dataUrl: string) {
@@ -251,6 +252,46 @@ export const getPostById = async (req: Request, res: Response) => {
 	}
 };
 
+function buildPublicMediaRewriter(req: Request) {
+	const reqBase = `${req.protocol}://${req.get('host')}`.replace(/\/$/, '');
+	const rewriteOne = (url: string): string => {
+		if (!url) return '';
+		if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+		let u = url.replace(/https?:\/\/localhost:\d+/gi, reqBase);
+		u = u.replace(/https?:\/\/127\.0\.0\.1:\d+/gi, reqBase);
+		if (u.startsWith('//')) return `${req.protocol}:${u}`;
+		if (u.startsWith('/')) return `${reqBase}${u}`;
+		if (!/^https?:\/\//i.test(u)) return `${reqBase}/${u.replace(/^\//, '')}`;
+		return u;
+	};
+	return (raw: string | null | undefined): string => {
+		if (raw == null || raw === '') return raw ?? '';
+		if (raw.startsWith('[')) {
+			try {
+				const arr = JSON.parse(raw) as unknown;
+				if (Array.isArray(arr)) {
+					return JSON.stringify(
+						arr.map((item) => (typeof item === 'string' ? rewriteOne(item) : item)),
+					);
+				}
+			} catch {
+				/* fall through */
+			}
+		}
+		if (raw.startsWith('PDF_PLACEHOLDER|')) {
+			const thumb = raw.slice('PDF_PLACEHOLDER|'.length);
+			return `PDF_PLACEHOLDER|${rewriteOne(thumb)}`;
+		}
+		if (raw.includes('|')) {
+			const i = raw.indexOf('|');
+			const a = raw.slice(0, i);
+			const b = raw.slice(i + 1);
+			return `${rewriteOne(a)}|${rewriteOne(b)}`;
+		}
+		return rewriteOne(raw);
+	};
+}
+
 export const getPublicPosts = async (req: Request, res: Response) => {
 	try {
 		const { departmentId } = req.query;
@@ -258,13 +299,7 @@ export const getPublicPosts = async (req: Request, res: Response) => {
 		const limit = Number.isFinite(rawLimit) ? Math.min(Math.max(rawLimit, 1), 30) : 20;
 		const offset = parseInt(req.query.offset as string) || 0;
 
-		const reqBase = `${req.protocol}://${req.get('host')}`;
-
-		const rewriteUrl = (url: string | null | undefined): string => {
-			if (!url) return url ?? '';
-			// Replace any stored localhost:PORT that differs from current server
-			return url.replace(/https?:\/\/localhost:\d+/g, reqBase);
-		};
+		const rewriteMediaField = buildPublicMediaRewriter(req);
 
 		const query = db
 			.select({
@@ -287,7 +322,10 @@ export const getPublicPosts = async (req: Request, res: Response) => {
 			.limit(limit)
 			.offset(offset);
 
-		const mapPost = (p: { imageUrl: string | null; [key: string]: unknown }) => ({ ...p, imageUrl: rewriteUrl(p.imageUrl) });
+		const mapPost = (p: { imageUrl: string | null; [key: string]: unknown }) => ({
+			...p,
+			imageUrl: rewriteMediaField(p.imageUrl),
+		});
 
 		if (departmentId && typeof departmentId === 'string') {
 			const allPosts = await query.where(eq(posts.departmentId, departmentId));
