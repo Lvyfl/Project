@@ -8,6 +8,7 @@ const multer_1 = __importDefault(require("multer"));
 const db_1 = require("../db");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const blob_1 = require("@vercel/blob");
+const client_1 = require("@vercel/blob/client");
 const publicMediaRewriter_1 = require("../utils/publicMediaRewriter");
 const router = (0, express_1.Router)();
 const upload = (0, multer_1.default)({
@@ -69,8 +70,19 @@ router.get('/', authMiddleware_1.authenticateToken, async (req, res) => {
         return res.status(500).json({ error: error.message });
     }
 });
+const handleMusicUpload = (req, res, next) => {
+    upload.single('audioFile')(req, res, (err) => {
+        if (err) {
+            if (err instanceof multer_1.default.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).json({ error: 'Audio file is too large. Maximum file size is 200MB.' });
+            }
+            return res.status(400).json({ error: err.message || 'Failed to process audio upload' });
+        }
+        next();
+    });
+};
 // POST /music/upload  — upload audio file, auth required
-router.post('/upload', authMiddleware_1.authenticateToken, upload.single('audioFile'), async (req, res) => {
+router.post('/upload', authMiddleware_1.authenticateToken, handleMusicUpload, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No audio file provided' });
@@ -88,6 +100,43 @@ router.post('/upload', authMiddleware_1.authenticateToken, upload.single('audioF
     catch (error) {
         console.error('Music upload error:', error);
         return res.status(500).json({ error: error.message || 'Failed to upload music' });
+    }
+});
+// POST /music/upload/token — generate a short-lived direct upload token for the client
+router.post('/upload/token', authMiddleware_1.authenticateToken, async (req, res) => {
+    const { pathname } = req.body;
+    if (typeof pathname !== 'string' || pathname.trim() === '') {
+        return res.status(400).json({ error: 'Upload pathname is required' });
+    }
+    try {
+        const validUntil = new Date();
+        validUntil.setMinutes(validUntil.getMinutes() + 10);
+        const clientToken = await (0, client_1.generateClientTokenFromReadWriteToken)({
+            pathname,
+            validUntil: validUntil.getTime(),
+        });
+        return res.json({ clientToken });
+    }
+    catch (error) {
+        console.error('Music upload token error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to generate upload token' });
+    }
+});
+// POST /music/upload/direct — record metadata once client-side direct upload is complete
+router.post('/upload/direct', authMiddleware_1.authenticateToken, async (req, res) => {
+    const { filename, url } = req.body;
+    if (typeof filename !== 'string' || filename.trim() === '' || typeof url !== 'string' || url.trim() === '') {
+        return res.status(400).json({ error: 'filename and url are required' });
+    }
+    try {
+        const result = await db_1.pool.query(`INSERT INTO music (filename, file_url, is_active, volume)
+			 VALUES ($1, $2, FALSE, 0.35)
+			 RETURNING id, filename, file_url, is_active, volume, created_at`, [filename, url]);
+        return res.status(201).json(result.rows[0]);
+    }
+    catch (error) {
+        console.error('Music direct upload finalize error:', error);
+        return res.status(500).json({ error: error.message || 'Failed to save uploaded music' });
     }
 });
 // PUT /music/:id/volume  — update volume, auth required

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { upload } from '@vercel/blob/client';
 import { musicAPI } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -37,6 +38,8 @@ export default function UploadMusicSection() {
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>('');
 
+  const MAX_MUSIC_UPLOAD_SIZE = 200 * 1024 * 1024;
+
   const showNotice = (msg: string, kind: 'success' | 'error') => {
     setNotice({ msg, kind });
     setTimeout(() => setNotice(null), 3500);
@@ -70,11 +73,31 @@ export default function UploadMusicSection() {
 
   const handleUpload = async () => {
     if (!previewFile) return;
+    if (previewFile.size > MAX_MUSIC_UPLOAD_SIZE) {
+      showNotice('File is too large. Maximum audio upload size is 200MB.', 'error');
+      return;
+    }
+
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append('audioFile', previewFile);
-      await musicAPI.upload(fd);
+      const ext = previewFile.name.substring(previewFile.name.lastIndexOf('.'));
+      const pathname = `music_${Date.now()}_${Math.random().toString(16).slice(2)}${ext}`;
+
+      const tokenResult = await musicAPI.getUploadToken({ pathname });
+      const clientToken = tokenResult.data.clientToken;
+
+      const uploadResult = await upload(pathname, previewFile, {
+        ...( { token: clientToken } as any),
+        contentType: previewFile.type || 'application/octet-stream',
+      } as any);
+
+      const musicUrl = uploadResult.url || uploadResult.downloadUrl;
+      if (!musicUrl) {
+        throw new Error('Failed to get upload URL after direct upload');
+      }
+
+      await musicAPI.uploadDirect({ filename: previewFile.name, url: musicUrl });
+
       setPreviewFile(null);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl('');
@@ -82,7 +105,7 @@ export default function UploadMusicSection() {
       showNotice('Music uploaded successfully', 'success');
       loadTracks();
     } catch (e: any) {
-      showNotice(e.response?.data?.error || 'Upload failed', 'error');
+      showNotice(e.response?.data?.error || e.message || 'Upload failed', 'error');
     } finally {
       setUploading(false);
     }
@@ -159,7 +182,7 @@ export default function UploadMusicSection() {
       <div className={`${card} rounded-2xl p-6`}>
         <h3 className={`font-bold text-lg mb-1 ${textMain}`}>Upload Background Music</h3>
         <p className={`${textMuted} text-sm mb-5`}>
-          Upload MP3 or WAV files. The active track will play globally on the viewer site.
+          Upload MP3 or WAV files. The active track will play globally on the viewer site. Direct upload supports large tracks up to 200MB and long durations.
         </p>
 
         <input

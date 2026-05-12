@@ -131,6 +131,10 @@ export const musicAPI = {
   getActive: () => api.get('/music/active'),
   upload: (formData: FormData) =>
     api.post('/music/upload', formData),
+  getUploadToken: (data: { pathname: string }) =>
+    api.post('/music/upload/token', data),
+  uploadDirect: (data: { filename: string; url: string }) =>
+    api.post('/music/upload/direct', data),
   activate: (id: string) => api.put(`/music/${id}/activate`),
   updateVolume: (id: string, volume: number) => api.put(`/music/${id}/volume`, { volume }),
   deactivateAll: () => api.put('/music/deactivate-all'),
