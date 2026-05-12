@@ -113,6 +113,7 @@ router.post('/upload/token', authMiddleware_1.authenticateToken, async (req, res
         validUntil.setMinutes(validUntil.getMinutes() + 10);
         const clientToken = await (0, client_1.generateClientTokenFromReadWriteToken)({
             pathname,
+            access: 'public',
             validUntil: validUntil.getTime(),
         });
         return res.json({ clientToken });

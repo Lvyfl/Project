@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { upload } from '@vercel/blob/client';
+import { put } from '@vercel/blob/client';
 import { musicAPI } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -86,8 +86,9 @@ export default function UploadMusicSection() {
       const tokenResult = await musicAPI.getUploadToken({ pathname });
       const clientToken = tokenResult.data.clientToken;
 
-      const uploadResult = await upload(pathname, previewFile, {
-        ...( { token: clientToken } as any),
+      const uploadResult = await put(pathname, previewFile, {
+        access: 'public',
+        token: clientToken,
         contentType: previewFile.type || 'application/octet-stream',
       } as any);
 

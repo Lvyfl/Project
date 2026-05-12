@@ -125,8 +125,9 @@ router.post('/upload/token', authenticateToken, async (req, res) => {
 		validUntil.setMinutes(validUntil.getMinutes() + 10);
 		const clientToken = await generateClientTokenFromReadWriteToken({
 			pathname,
+			access: 'public',
 			validUntil: validUntil.getTime(),
-		});
+		} as any);
 		return res.json({ clientToken });
 	} catch (error: any) {
 		console.error('Music upload token error:', error);
