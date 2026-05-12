@@ -245,25 +245,33 @@ export default function KioskPage() {
 
   /* ── Background music ── */
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [musicMuted, setMusicMuted] = useState(false);
   const [musicReady, setMusicReady] = useState(false);
   const currentMusicRef = useRef<{ url: string; volume: number } | null>(null);
 
+  // Update music based on active track changes — only recreate if URL changes
   useEffect(() => {
     const rawMusic = activeMusic?.file_url || paramMusic;
     const musicUrl = rawMusic ? resolveApiMediaUrl(rawMusic, getApiBase()) : '';
     const musicVolume = activeMusic?.volume ?? 0.35;
 
-    // Check if music actually changed
-    const musicChanged = !currentMusicRef.current || 
-                        currentMusicRef.current.url !== musicUrl || 
-                        currentMusicRef.current.volume !== musicVolume;
-
-    if (!musicChanged) return;
+    // Check if music URL actually changed
+    const urlChanged = !currentMusicRef.current || currentMusicRef.current.url !== musicUrl;
+    const volumeChanged = currentMusicRef.current?.volume !== musicVolume;
 
     // Update ref
     currentMusicRef.current = { url: musicUrl, volume: musicVolume };
 
+    // If URL didn't change, just update volume and return
+    if (!urlChanged) {
+      if (volumeChanged && audioRef.current) {
+        audioRef.current.volume = musicVolume;
+      }
+      return;
+    }
+
+    // URL changed — need to create/replace audio
     if (!musicUrl) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -274,7 +282,7 @@ export default function KioskPage() {
       return;
     }
 
-    // Create or update audio
+    // Create new audio element only if URL changed
     if (!audioRef.current || audioRef.current.src !== musicUrl) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -285,9 +293,12 @@ export default function KioskPage() {
       audio.volume = musicVolume;
       audioRef.current = audio;
       setMusicReady(true);
-      // Attempt autoplay immediately; browsers may block until a gesture
+      
+      // Clear any pending play attempts
+      if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
+      
+      // Attempt autoplay; if blocked, retry on first user gesture
       audio.play().catch(() => {
-        // Autoplay blocked — retry on first user interaction
         const onGesture = () => {
           audio.play().catch(() => {});
           window.removeEventListener('click', onGesture);
@@ -296,9 +307,6 @@ export default function KioskPage() {
         window.addEventListener('click', onGesture);
         window.addEventListener('keydown', onGesture);
       });
-    } else if (audioRef.current) {
-      // Only update volume
-      audioRef.current.volume = musicVolume;
     }
   }, [activeMusic?.file_url, activeMusic?.volume, paramMusic]);
 
