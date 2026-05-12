@@ -164,11 +164,13 @@ export default function KioskPage() {
     };
   }, []);
 
-  /* ── auto-refresh (reload page) ── */
+  /* ── auto-refresh: refetch posts/events/music without full page reload (reload would tear down Audio and restart music) ── */
   useEffect(() => {
-    const id = setTimeout(() => window.location.reload(), refreshS * 1000);
-    return () => clearTimeout(id);
-  }, [refreshS]);
+    const id = setInterval(() => {
+      void fetchAll();
+    }, refreshS * 1000);
+    return () => clearInterval(id);
+  }, [refreshS, fetchAll]);
 
   /* ── hero slide timer (per-post duration based on body length) ── */
   const heroSlideables = useMemo(
