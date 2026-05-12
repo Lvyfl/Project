@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 type DepartmentPost = {
   id: string;
   caption: string;
+  body?: string | null;
   imageUrl?: string | null;
   createdAt: string;
   hasPdf?: boolean;
@@ -30,6 +31,8 @@ export default function UploadPdfSection({
   const router = useRouter();
   const d = theme === 'dark';
 
+  /** Display title → DB `caption`; description → DB `body` */
+  const [title, setTitle] = useState('');
   const [caption, setCaption] = useState('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [thumbFile, setThumbFile] = useState<File | null>(null);
@@ -173,6 +176,7 @@ export default function UploadPdfSection({
   };
 
   const resetForm = () => {
+    setTitle('');
     setCaption('');
     setPdfFile(null);
     setThumbFile(null);
@@ -181,8 +185,8 @@ export default function UploadPdfSection({
   };
 
   const runUpload = async () => {
-    if (!caption.trim()) {
-      setUploadNotice({ title: 'Missing caption', message: 'Document caption is required.', kind: 'error' });
+    if (!title.trim()) {
+      setUploadNotice({ title: 'Missing title', message: 'Document title is required.', kind: 'error' });
       return;
     }
     if (!pdfFile) {
@@ -197,7 +201,8 @@ export default function UploadPdfSection({
     setSubmitting(true);
     try {
       const fd = new FormData();
-      fd.append('caption', caption.trim());
+      fd.append('title', title.trim());
+      fd.append('body', caption.trim());
       fd.append('pdfFile', pdfFile);
       fd.append('thumbnailFile', thumbFile);
 
@@ -221,8 +226,8 @@ export default function UploadPdfSection({
     e.preventDefault();
     if (submitting) return;
 
-    if (!caption.trim()) {
-      setUploadNotice({ title: 'Missing caption', message: 'Document caption is required.', kind: 'error' });
+    if (!title.trim()) {
+      setUploadNotice({ title: 'Missing title', message: 'Document title is required.', kind: 'error' });
       return;
     }
     if (!pdfFile) {
@@ -318,15 +323,28 @@ export default function UploadPdfSection({
 
         <form onSubmit={handleUpload} className="space-y-4">
           <div>
-            <label className={`block text-xs font-semibold mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Document Caption *</label>
+            <label className={`block text-xs font-semibold mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Title *</label>
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              required
+              className={`w-full px-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 ${
+                d ? 'bg-white/5 border border-white/10 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'
+              }`}
+              placeholder="Short headline for this document (saved as post title)"
+            />
+          </div>
+
+          <div>
+            <label className={`block text-xs font-semibold mb-2 ${d ? 'text-gray-300' : 'text-gray-700'}`}>Caption</label>
             <textarea
               value={caption}
               onChange={e => setCaption(e.target.value)}
-              required
               className={`w-full px-4 py-3 rounded-xl text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-orange-500 ${
                 d ? 'bg-white/5 border border-white/10 text-white' : 'bg-gray-50 border border-gray-300 text-gray-900'
               }`}
-              placeholder="Enter a description or caption for this document..."
+              placeholder="Optional longer description (saved as post body for viewers)"
             />
           </div>
 
@@ -468,6 +486,14 @@ export default function UploadPdfSection({
                       >
                         {post.caption}
                       </p>
+                      {post.body ? (
+                        <p
+                          className={`text-xs mt-1 line-clamp-2 whitespace-pre-wrap ${d ? 'text-gray-400' : 'text-gray-600'}`}
+                          style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                        >
+                          {post.body}
+                        </p>
+                      ) : null}
                       <p className={`text-xs mt-1 ${d ? 'text-gray-400' : 'text-gray-500'}`}>{formatDateTime(post.createdAt)}</p>
                       {isPdf && (
                         <span className={`inline-flex items-center mt-2 text-[10px] px-2 py-1 rounded-full font-bold ${d ? 'bg-blue-500/10 border border-blue-500/20 text-blue-300' : 'bg-blue-50 border border-blue-200 text-blue-700'}`}>

@@ -42,10 +42,14 @@ router.post(
 	]),
 	async (req: any, res) => {
 		try {
-			const caption = String(req.body?.caption || '').trim();
-			if (!caption) {
-				return res.status(400).json({ error: 'Document caption is required' });
+			// Title → posts.caption; optional description → posts.body (legacy: single `caption` field treated as title)
+			const title = String(req.body?.title ?? '').trim();
+			const legacyCaption = String(req.body?.caption ?? '').trim();
+			const captionForDb = title || legacyCaption;
+			if (!captionForDb) {
+				return res.status(400).json({ error: 'Document title is required' });
 			}
+			const bodyForDb = String(req.body?.body ?? '').trim() || null;
 
 			const files = req.files as Record<string, Express.Multer.File[]> | undefined;
 			const pdf = files?.pdfFile?.[0];
@@ -96,7 +100,8 @@ router.post(
 			const thumbUrl = thumbBlob.url;
 
 			req.body.imageUrl = `${pdfUrl}|${thumbUrl}`;
-			req.body.caption = caption;
+			req.body.caption = captionForDb;
+			req.body.body = bodyForDb;
 			return createPost(req, res);
 		} catch (error: any) {
 			console.error('Post upload error:', error);
