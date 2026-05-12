@@ -299,30 +299,38 @@ export default function KioskPage() {
       // Clear any pending play attempts
       if (audioTimeoutRef.current) clearTimeout(audioTimeoutRef.current);
       
-      // Attempt autoplay; if blocked, retry on first user gesture
+      // Attempt autoplay; if blocked, retry on first user gesture (capture phase so
+      // clicks that stopPropagation on inner controls still count)
       audio.play().catch(() => {
         const onGesture = () => {
           audio.play().catch(() => {});
-          window.removeEventListener('click', onGesture);
-          window.removeEventListener('keydown', onGesture);
+          window.removeEventListener('click', onGesture, true);
+          window.removeEventListener('keydown', onGesture, true);
         };
-        window.addEventListener('click', onGesture);
-        window.addEventListener('keydown', onGesture);
+        window.addEventListener('click', onGesture, true);
+        window.addEventListener('keydown', onGesture, true);
       });
     }
   }, [activeMusic?.file_url, activeMusic?.volume, paramMusic]);
 
+  const resumeMusicIfPossible = useCallback(() => {
+    void audioRef.current?.play().catch(() => {});
+  }, []);
+
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!audioRef.current) return;
+    // Same user gesture as the mute toggle — browsers often block autoplay until this
+    void audioRef.current.play().catch(() => {});
     const next = !musicMuted;
     audioRef.current.muted = next;
-    if (!next && audioRef.current.paused) audioRef.current.play().catch(() => {});
+    if (!next && audioRef.current.paused) void audioRef.current.play().catch(() => {});
     setMusicMuted(next);
   };
 
   /* ── fullscreen on click ── */
   const enterFullscreen = () => {
+    resumeMusicIfPossible();
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
   };
 
@@ -351,6 +359,7 @@ export default function KioskPage() {
   /* ────────────────────────── render ────────────────────────── */
   return (
     <div
+      onPointerDownCapture={resumeMusicIfPossible}
       onClick={enterFullscreen}
       style={{
         width: '100vw', height: '100vh',
