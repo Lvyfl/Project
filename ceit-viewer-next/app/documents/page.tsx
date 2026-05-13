@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PdfThumbnail from './PdfThumbnail';
 import PageHeader from '@/components/PageHeader';
@@ -76,6 +76,11 @@ export default function DocumentsPage() {
     loadDocuments(page);
   }, [loadDocuments, page]);
 
+  const tickerLines = useMemo(() => {
+    if (!documents.length) return undefined;
+    return documents.slice(0, 18).map((doc) => doc.filename.replace(/\.pdf$/i, '') || doc.filename);
+  }, [documents]);
+
   useEffect(() => {
     setIsNavigatingModule(false);
   }, [pathname]);
@@ -94,6 +99,7 @@ export default function DocumentsPage() {
         onThemeToggle={toggleTheme}
         onNavigate={startModuleNavigation}
         currentPage="documents"
+        tickerLines={tickerLines}
       />
 
       {/* ── MAIN ── */}

@@ -77,6 +77,24 @@ body {
   height: 0;
 }
 
+/* Breaking-news ticker (PageHeader) — two identical cycles; -50% = one full cycle */
+@keyframes ceit-ticker-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.ceit-ticker-track {
+  display: inline-flex;
+  flex-direction: row;
+  width: max-content;
+  animation: ceit-ticker-scroll var(--ceit-ticker-duration, 42s) linear infinite;
+  will-change: transform;
+}
+
 /* Kiosk/TV display mode — toggled on document.body via JS */
 body.kiosk-mode {
   overflow: hidden !important;

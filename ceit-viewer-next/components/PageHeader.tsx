@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -20,6 +20,8 @@ interface PageHeaderProps {
   onFilterChange?: (deptId: string) => void;
   showFilter?: boolean;
   todayStr?: string;
+  /** Lines in the orange BREAKING strip (one seamless loop = two copies internally). */
+  tickerLines?: string[];
 }
 
 export default function PageHeader({
@@ -32,6 +34,7 @@ export default function PageHeader({
   onFilterChange,
   showFilter: externalShowFilter = false,
   todayStr,
+  tickerLines,
 }: PageHeaderProps) {
   const d = theme === 'dark';
   const [scrolled, setScrolled] = useState(false);
@@ -56,6 +59,15 @@ export default function PageHeader({
   }, [todayStr]);
 
   const defaultTodayStr = todayStr ?? mastheadDate;
+
+  const normalizedTickerLines = useMemo(() => {
+    const raw = (tickerLines ?? []).map((s) => s.trim()).filter(Boolean);
+    const clipped = raw.map((s) => s.slice(0, 140));
+    if (clipped.length) return clipped;
+    return ['CvSU CEIT Announcement — Truth, Excellence, and Service'];
+  }, [tickerLines]);
+
+  const tickerDurationSec = Math.min(90, Math.max(24, 18 + normalizedTickerLines.length * 5));
 
   // Handle scroll effect for masthead collapse
 useEffect(() => {
@@ -158,17 +170,32 @@ useEffect(() => {
           >
             BREAKING
           </div>
-          <div className="overflow-hidden flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <div
-              className="ticker-scroll-track whitespace-nowrap inline-flex gap-16 text-white"
+              className="ceit-ticker-track text-white"
               style={{
                 fontFamily: "var(--font-oswald, Oswald, sans-serif)",
                 fontSize: '12px',
                 letterSpacing: '0.5px',
+                ['--ceit-ticker-duration' as string]: `${tickerDurationSec}s`,
               }}
             >
-              <span>◆&nbsp;&nbsp;CvSU CEIT Announcement — Truth, Excellence, and Service</span>
-              <span>◆&nbsp;&nbsp;CvSU CEIT Announcement — Truth, Excellence, and Service</span>
+              {[0, 1].map((dup) => (
+                <div
+                  key={dup}
+                  className="flex shrink-0 items-center gap-10 pr-12"
+                  aria-hidden={dup === 1 ? true : undefined}
+                >
+                  {normalizedTickerLines.map((line, i) => (
+                    <span key={`${dup}-${i}`} className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap">
+                      <span className="text-white/90" aria-hidden>
+                        ◆
+                      </span>
+                      <span>{line}</span>
+                    </span>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         </div>

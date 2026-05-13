@@ -338,9 +338,13 @@ export default function ViewerPage() {
 
   const tickerItems = useMemo(() => {
     const items: string[] = [];
-    posts.slice(0, 8).forEach(p => { if (p.caption) items.push(p.caption.slice(0, 100)); });
-    highlightedEvents.slice(0, 5).forEach(e => { if (e.title) items.push(e.title); });
-    return items.length ? [...items, ...items] : ['CvSU CEIT Bulletin — Truth, Excellence, and Service', 'CvSU CEIT Bulletin — Truth, Excellence, and Service'];
+    posts.slice(0, 8).forEach((p) => {
+      if (p.caption) items.push(p.caption.slice(0, 110));
+    });
+    highlightedEvents.slice(0, 6).forEach((e) => {
+      if (e.title) items.push(e.title.slice(0, 110));
+    });
+    return items.length ? items : undefined;
   }, [posts, highlightedEvents]);
 
   const bg = d ? 'bg-[#0D0D0D]' : 'bg-[#FAFAFA]';
@@ -379,6 +383,7 @@ export default function ViewerPage() {
           setShowFilter(false);
         }}
         showFilter={showFilter}
+        tickerLines={tickerItems}
       />
 
       {/* ── PAGE ── */}
@@ -1127,16 +1132,6 @@ export default function ViewerPage() {
         </div>
       )}
 
-      <style jsx global>{`
-        @keyframes tickerScroll {
-          0%   { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .ticker-scroll-track {
-          animation: tickerScroll 45s linear infinite;
-          will-change: transform;
-        }
-      `}</style>
     </div>
   );
 }

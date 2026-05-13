@@ -157,6 +157,17 @@ export default function EventsPage() {
     return [...upcomingSourceEvents].sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
   }, [upcomingSourceEvents]);
 
+  const tickerLines = useMemo(() => {
+    const lines: string[] = [];
+    for (const ev of highlightedEvents.slice(0, 14)) {
+      if (ev.title?.trim()) {
+        const ds = new Date(ev.eventDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        lines.push(`${ev.title.trim().slice(0, 100)} · ${ds}`);
+      }
+    }
+    return lines.length ? lines : undefined;
+  }, [highlightedEvents]);
+
   const announcementEvents = useMemo(() => {
     return highlightedEvents.filter((event) => !!event.isAnnouncement).slice(0, 4);
   }, [highlightedEvents]);
@@ -207,6 +218,7 @@ export default function EventsPage() {
         onThemeToggle={toggleTheme}
         onNavigate={startModuleNavigation}
         currentPage="events"
+        tickerLines={tickerLines}
       />
 
       <main className="mx-auto w-full max-w-[1200px] p-5 lg:p-7">
