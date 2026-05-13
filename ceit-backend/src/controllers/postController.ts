@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { db } from '../db';
+import { db, pool } from '../db';
 import { posts, users, departments, postLikes, postViews } from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
@@ -29,6 +29,33 @@ function extFromMime(mime: string) {
 	if (m === 'image/webp') return 'webp';
 	if (m === 'image/gif') return 'gif';
 	return 'bin';
+}
+
+/** Post `imageUrl` for DB-stored PDFs: `{origin}/documents/{id}|{thumbUrl}` */
+const PDF_DOC_ID_IN_PATH = /\/documents\/([^/?#]+)/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function extractPdfDocumentIdFromImageUrl(imageUrl: string | null | undefined): string | null {
+	if (!imageUrl || typeof imageUrl !== 'string') return null;
+	const beforeThumb = imageUrl.includes('|') ? imageUrl.split('|')[0] : imageUrl;
+	const m = PDF_DOC_ID_IN_PATH.exec(beforeThumb);
+	if (!m?.[1]) return null;
+	try {
+		return decodeURIComponent(m[1].trim());
+	} catch {
+		return m[1].trim();
+	}
+}
+
+async function deletePdfDocumentRowIfPresent(imageUrl: string | null | undefined): Promise<void> {
+	const docId = extractPdfDocumentIdFromImageUrl(imageUrl);
+	if (!docId || !UUID_RE.test(docId)) return;
+	try {
+		await pool.query('DELETE FROM pdf_documents WHERE id = $1', [docId]);
+	} catch (e: any) {
+		if (e?.code === '42P01') return;
+		console.error('deletePdfDocumentRowIfPresent:', e);
+	}
 }
 
 async function uploadImageBlob(buffer: Buffer, ext: string) {
@@ -198,8 +225,9 @@ export const deletePost = async (req: any, res: Response) => {
 		const { id } = req.params;
 		const { userId, departmentId } = req.user;
 
-		const deleted = await db
-			.delete(posts)
+		const [existing] = await db
+			.select({ imageUrl: posts.imageUrl })
+			.from(posts)
 			.where(
 				and(
 					eq(posts.id, id),
@@ -207,11 +235,23 @@ export const deletePost = async (req: any, res: Response) => {
 					eq(posts.departmentId, departmentId)
 				)
 			)
-			.returning({ id: posts.id });
+			.limit(1);
 
-		if (!deleted[0]) {
+		if (!existing) {
 			return res.status(404).json({ error: 'Post not found or unauthorized' });
 		}
+
+		await deletePdfDocumentRowIfPresent(existing.imageUrl);
+
+		await db
+			.delete(posts)
+			.where(
+				and(
+					eq(posts.id, id),
+					eq(posts.adminId, userId),
+					eq(posts.departmentId, departmentId)
+				)
+			);
 
 		res.json({ message: 'Post deleted successfully' });
 	} catch (error: any) {

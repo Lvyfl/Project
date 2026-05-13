@@ -35,6 +35,35 @@ function extFromMime(mime) {
         return 'gif';
     return 'bin';
 }
+const PDF_DOC_ID_IN_PATH = /\/documents\/([^/?#]+)/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function extractPdfDocumentIdFromImageUrl(imageUrl) {
+    if (!imageUrl || typeof imageUrl !== 'string')
+        return null;
+    const beforeThumb = imageUrl.includes('|') ? imageUrl.split('|')[0] : imageUrl;
+    const m = PDF_DOC_ID_IN_PATH.exec(beforeThumb);
+    if (!(m === null || m === void 0 ? void 0 : m[1]))
+        return null;
+    try {
+        return decodeURIComponent(m[1].trim());
+    }
+    catch (_a) {
+        return m[1].trim();
+    }
+}
+async function deletePdfDocumentRowIfPresent(imageUrl) {
+    const docId = extractPdfDocumentIdFromImageUrl(imageUrl);
+    if (!docId || !UUID_RE.test(docId))
+        return;
+    try {
+        await db_1.pool.query('DELETE FROM pdf_documents WHERE id = $1', [docId]);
+    }
+    catch (e) {
+        if (e?.code === '42P01')
+            return;
+        console.error('deletePdfDocumentRowIfPresent:', e);
+    }
+}
 async function uploadImageBlob(buffer, ext) {
     const fileName = `post_${Date.now()}_${Math.random().toString(16).slice(2)}.${ext}`;
     const blob = await (0, blob_1.put)(fileName, buffer, { access: 'public' });
@@ -184,13 +213,18 @@ const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
         const { userId, departmentId } = req.user;
-        const deleted = await db_1.db
-            .delete(schema_1.posts)
+        const [existing] = await db_1.db
+            .select({ imageUrl: schema_1.posts.imageUrl })
+            .from(schema_1.posts)
             .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId)))
-            .returning({ id: schema_1.posts.id });
-        if (!deleted[0]) {
+            .limit(1);
+        if (!existing) {
             return res.status(404).json({ error: 'Post not found or unauthorized' });
         }
+        await deletePdfDocumentRowIfPresent(existing.imageUrl);
+        await db_1.db
+            .delete(schema_1.posts)
+            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId)));
         res.json({ message: 'Post deleted successfully' });
     }
     catch (error) {
