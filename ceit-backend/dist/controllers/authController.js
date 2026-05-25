@@ -9,6 +9,7 @@ const schema_1 = require("../db/schema");
 const drizzle_orm_1 = require("drizzle-orm");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const auditLogger_1 = require("../utils/auditLogger");
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 const getDepartments = async (_req, res) => {
     try {
@@ -45,6 +46,17 @@ const register = async (req, res) => {
             departmentId: department.id,
             isMasterAdmin: false,
         }).returning();
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'create',
+            resourceType: 'admin',
+            resourceId: newUser.id,
+            departmentId: newUser.departmentId,
+            actorId: req.user.userId,
+            title: newUser.name,
+            description: 'Created admin account',
+            category: null,
+            imageUrl: null,
+        });
         res.status(201).json({ message: 'Admin registered successfully', user: { id: newUser.id, name: newUser.name, email: newUser.email, departmentId: newUser.departmentId } });
     }
     catch (error) {
@@ -90,6 +102,17 @@ const deleteAdmin = async (req, res) => {
             return res.status(403).json({ error: 'Cannot delete the master admin account.' });
         }
         await db_1.db.delete(schema_1.users).where((0, drizzle_orm_1.eq)(schema_1.users.id, id));
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'delete',
+            resourceType: 'admin',
+            resourceId: target.id,
+            departmentId: target.departmentId,
+            actorId: req.user.userId,
+            title: target.name,
+            description: 'Deleted admin account',
+            category: null,
+            imageUrl: null,
+        });
         res.json({ message: 'Admin deleted successfully.' });
     }
     catch (error) {
@@ -123,6 +146,17 @@ const updateAdmin = async (req, res) => {
             updates.password = await bcryptjs_1.default.hash(password, 10);
         }
         const [updated] = await db_1.db.update(schema_1.users).set(updates).where((0, drizzle_orm_1.eq)(schema_1.users.id, id)).returning();
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'update',
+            resourceType: 'admin',
+            resourceId: updated.id,
+            departmentId: updated.departmentId,
+            actorId: req.user.userId,
+            title: updated.name,
+            description: 'Updated admin account',
+            category: null,
+            imageUrl: null,
+        });
         res.json({ message: 'Admin updated successfully.', user: { id: updated.id, name: updated.name, email: updated.email, departmentId: updated.departmentId } });
     }
     catch (error) {

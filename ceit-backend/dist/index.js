@@ -13,6 +13,7 @@ const eventRoutes_1 = __importDefault(require("./routes/eventRoutes"));
 const documentRoutes_1 = __importDefault(require("./routes/documentRoutes"));
 const backgroundRoutes_1 = __importDefault(require("./routes/backgroundRoutes"));
 const musicRoutes_1 = __importDefault(require("./routes/musicRoutes"));
+const auditRoutes_1 = __importDefault(require("./routes/auditRoutes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3000;
@@ -43,6 +44,7 @@ app.use('/events', eventRoutes_1.default);
 app.use('/documents', documentRoutes_1.default);
 app.use('/backgrounds', backgroundRoutes_1.default);
 app.use('/music', musicRoutes_1.default);
+app.use('/audit-logs', auditRoutes_1.default);
 app.get('/', (_req, res) => {
     res.json({ message: 'CEIT Admin Portal API is running' });
 });

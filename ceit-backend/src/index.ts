@@ -8,6 +8,7 @@ import eventRoutes from './routes/eventRoutes';
 import documentRoutes from './routes/documentRoutes';
 import backgroundRoutes from './routes/backgroundRoutes';
 import musicRoutes from './routes/musicRoutes';
+import auditRoutes from './routes/auditRoutes';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/events', eventRoutes);
 app.use('/documents', documentRoutes);
 app.use('/backgrounds', backgroundRoutes);
 app.use('/music', musicRoutes);
+app.use('/audit-logs', auditRoutes);
 
 app.get('/', (_req: express.Request, res: express.Response) => {
   res.json({ message: 'CEIT Admin Portal API is running' });

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { db, pool } from '../db';
 import { events, users, departments } from '../db/schema';
 import { eq, and, gte, lte, type SQL } from 'drizzle-orm';
+import { createAuditLogEntry } from '../utils/auditLogger';
 
 let eventColumnsEnsured = false;
 
@@ -93,6 +94,18 @@ export const createEvent = async (req: any, res: Response) => {
 			adminId: userId,
 			departmentId: departmentId,
 		}).returning();
+
+		await createAuditLogEntry({
+			action: 'create',
+			resourceType: 'event',
+			resourceId: newEvent.id,
+			departmentId: newEvent.departmentId,
+			actorId: userId,
+			title: newEvent.title,
+			description: newEvent.description || 'No description',
+			category: newEvent.isAnnouncement ? 'Announcement' : 'Event',
+			imageUrl: newEvent.eventImageUrl || null,
+		});
 
 		res.status(201).json(newEvent);
 	} catch (error: any) {
@@ -285,6 +298,18 @@ export const updateEvent = async (req: any, res: Response) => {
 			.where(eq(events.id, id))
 			.returning();
 
+		await createAuditLogEntry({
+			action: 'update',
+			resourceType: 'event',
+			resourceId: updatedEvent.id,
+			departmentId: updatedEvent.departmentId,
+			actorId: req.user.userId,
+			title: updatedEvent.title,
+			description: updatedEvent.description || 'No description',
+			category: updatedEvent.isAnnouncement ? 'Announcement' : 'Event',
+			imageUrl: updatedEvent.eventImageUrl || null,
+		});
+
 		res.json(updatedEvent);
 	} catch (error: any) {
 		res.status(500).json({ error: error.message });
@@ -309,6 +334,18 @@ export const deleteEvent = async (req: any, res: Response) => {
 		}
 
 		await db.delete(events).where(eq(events.id, id));
+
+		await createAuditLogEntry({
+			action: 'delete',
+			resourceType: 'event',
+			resourceId: event.id,
+			departmentId: event.departmentId,
+			actorId: req.user.userId,
+			title: event.title,
+			description: event.description || 'No description',
+			category: event.isAnnouncement ? 'Announcement' : 'Event',
+			imageUrl: event.eventImageUrl || null,
+		});
 
 		res.json({ message: 'Event deleted successfully' });
 	} catch (error: any) {

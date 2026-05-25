@@ -50,6 +50,13 @@
       "when": 1770702879412,
       "tag": "0010_post_category",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1779736368844,
+      "tag": "0011_audit_logs",
+      "breakpoints": true
     }
   ]
 }

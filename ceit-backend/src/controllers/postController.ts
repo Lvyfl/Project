@@ -4,6 +4,7 @@ import { posts, users, departments, postLikes, postViews } from '../db/schema';
 import { eq, and, desc, asc, sql } from 'drizzle-orm';
 import { put } from '@vercel/blob';
 import { buildPublicMediaRewriter } from '../utils/publicMediaRewriter';
+import { createAuditLogEntry } from '../utils/auditLogger';
 
 /** Public list payload limit per post media field (align with single-post cap so previews are not blanked). */
 const MAX_LIST_MEDIA_BYTES = 2 * 1024 * 1024;
@@ -120,6 +121,18 @@ export const createPost = async (req: any, res: Response) => {
 			departmentId: departmentId,
 		}).returning();
 
+		await createAuditLogEntry({
+			action: 'create',
+			resourceType: 'post',
+			resourceId: newPost.id,
+			departmentId: newPost.departmentId,
+			actorId: userId,
+			title: newPost.caption,
+			description: newPost.body || 'No body text',
+			category: newPost.category || null,
+			imageUrl: newPost.imageUrl || null,
+		});
+
 		res.status(201).json(newPost);
 	} catch (error: any) {
 		res.status(500).json({ error: error.message });
@@ -194,25 +207,39 @@ export const updatePost = async (req: any, res: Response) => {
 			? eq(posts.id, id)
 			: and(eq(posts.id, id), eq(posts.adminId, userId), eq(posts.departmentId, departmentId));
 
-		const updated = await db
-			.update(posts)
-			.set({ caption, body: body !== undefined ? (body || null) : undefined, category: category !== undefined ? (category || null) : undefined, imageUrl })
+		const [existingPost] = await db
+			.select()
+			.from(posts)
 			.where(postScope)
-			.returning({
-				id: posts.id,
-				caption: posts.caption,
-				body: posts.body,
-				imageUrl: posts.imageUrl,
-				createdAt: posts.createdAt,
-				departmentId: posts.departmentId,
-				adminId: posts.adminId,
-			});
+			.limit(1);
 
-		if (!updated[0]) {
+		if (!existingPost) {
 			return res.status(404).json({ error: 'Post not found or unauthorized' });
 		}
 
-		res.json(updated[0]);
+		const [updated] = await db
+			.update(posts)
+			.set({ caption, body: body !== undefined ? (body || null) : undefined, category: category !== undefined ? (category || null) : undefined, imageUrl })
+			.where(postScope)
+			.returning();
+
+		if (!updated) {
+			return res.status(404).json({ error: 'Post not found or unauthorized' });
+		}
+
+		await createAuditLogEntry({
+			action: 'update',
+			resourceType: 'post',
+			resourceId: updated.id,
+			departmentId: updated.departmentId,
+			actorId: userId,
+			title: updated.caption,
+			description: updated.body || 'No body text',
+			category: updated.category || null,
+			imageUrl: updated.imageUrl || null,
+		});
+
+		res.json(updated);
 	} catch (error: any) {
 		res.status(500).json({ error: error.message });
 	}
@@ -227,7 +254,7 @@ export const deletePost = async (req: any, res: Response) => {
 			: and(eq(posts.id, id), eq(posts.adminId, userId), eq(posts.departmentId, departmentId));
 
 		const [existing] = await db
-			.select({ imageUrl: posts.imageUrl })
+			.select()
 			.from(posts)
 			.where(postScope)
 			.limit(1);
@@ -241,6 +268,18 @@ export const deletePost = async (req: any, res: Response) => {
 		await db
 			.delete(posts)
 			.where(postScope);
+
+		await createAuditLogEntry({
+			action: 'delete',
+			resourceType: 'post',
+			resourceId: existing.id,
+			departmentId: existing.departmentId,
+			actorId: userId,
+			title: existing.caption,
+			description: existing.body || 'No body text',
+			category: existing.category || null,
+			imageUrl: existing.imageUrl || null,
+		});
 
 		res.json({ message: 'Post deleted successfully' });
 	} catch (error: any) {

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.events = exports.postViews = exports.postLikes = exports.posts = exports.users = exports.departments = void 0;
+exports.auditLogs = exports.events = exports.postViews = exports.postLikes = exports.posts = exports.users = exports.departments = void 0;
 const pg_core_1 = require("drizzle-orm/pg-core");
 // Departments table
 exports.departments = (0, pg_core_1.pgTable)('departments', {
@@ -58,3 +58,23 @@ exports.events = (0, pg_core_1.pgTable)('events', {
     isAnnouncement: (0, pg_core_1.boolean)('is_announcement').default(false).notNull(),
     createdAt: (0, pg_core_1.timestamp)('created_at').defaultNow().notNull(),
 });
+exports.auditLogs = (0, pg_core_1.pgTable)('audit_logs', {
+    id: (0, pg_core_1.uuid)('id').primaryKey().defaultRandom(),
+    action: (0, pg_core_1.varchar)('action', { length: 30 }).notNull(),
+    entityType: (0, pg_core_1.varchar)('entity_type', { length: 50 }).notNull(),
+    entityId: (0, pg_core_1.uuid)('entity_id').notNull(),
+    departmentId: (0, pg_core_1.uuid)('department_id').references(() => exports.departments.id),
+    actorAdminId: (0, pg_core_1.uuid)('actor_admin_id').references(() => exports.users.id).notNull(),
+    actorName: (0, pg_core_1.varchar)('actor_name', { length: 255 }).notNull(),
+    actorEmail: (0, pg_core_1.varchar)('actor_email', { length: 255 }).notNull(),
+    actorIsMasterAdmin: (0, pg_core_1.boolean)('actor_is_master_admin').default(false).notNull(),
+    title: (0, pg_core_1.varchar)('title', { length: 255 }).notNull(),
+    description: (0, pg_core_1.text)('description'),
+    category: (0, pg_core_1.varchar)('category', { length: 100 }),
+    imageUrl: (0, pg_core_1.text)('image_url'),
+    createdAt: (0, pg_core_1.timestamp)('created_at').defaultNow().notNull(),
+}, (table) => ({
+    createdAtIdx: (0, pg_core_1.index)('audit_logs_created_at_idx').on(table.createdAt),
+    departmentIdIdx: (0, pg_core_1.index)('audit_logs_department_id_idx').on(table.departmentId),
+    entityTypeIdx: (0, pg_core_1.index)('audit_logs_resource_type_idx').on(table.entityType),
+}));

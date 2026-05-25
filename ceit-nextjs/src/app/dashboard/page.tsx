@@ -5,7 +5,7 @@ import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { eventsAPI, postsAPI } from '@/lib/api';
+import { auditAPI, eventsAPI, postsAPI } from '@/lib/api';
 import CalendarSection from './CalendarSection';
 import UploadPdfSection from './UploadPdfSection';
 import UploadBackgroundSection from './UploadBackgroundSection';
@@ -234,14 +234,17 @@ export default function DashboardPage() {
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
-  const [auditEvents, setAuditEvents] = useState<Array<{
+  const [auditLogs, setAuditLogs] = useState<Array<{
     id: string;
+    resourceType: string;
+    action: string;
     title: string;
-    description?: string;
-    eventDate: string;
-    isAnnouncement?: boolean;
-    adminName?: string;
-    departmentName?: string;
+    description: string;
+    actorName: string;
+    departmentName: string;
+    createdAt: string;
+    badge: string;
+    icon: string;
   }>>([]);
   const [postsScrollProgress, setPostsScrollProgress] = useState(0);
   const [isPostsFeedScrollable, setIsPostsFeedScrollable] = useState(true);
@@ -339,22 +342,20 @@ export default function DashboardPage() {
     if (!isAuthenticated) return;
 
     let isMounted = true;
-    const loadAuditEvents = async () => {
+    const loadAuditLogs = async () => {
       try {
-        const response = await eventsAPI.getEvents({
-          allDepartments: true,
-        });
+        const response = await auditAPI.getLogs({ limit: 200 });
 
         if (!isMounted) return;
-        setAuditEvents(Array.isArray(response.data) ? response.data : []);
+        setAuditLogs(Array.isArray(response.data) ? response.data : []);
       } catch {
         if (isMounted) {
-          setAuditEvents([]);
+          setAuditLogs([]);
         }
       }
     };
 
-    loadAuditEvents();
+    loadAuditLogs();
 
     return () => {
       isMounted = false;
@@ -821,42 +822,34 @@ export default function DashboardPage() {
 
   const auditEntries = useMemo(() => {
     const now = new Date();
-    const postEntries = posts.map((post) => ({
-      id: `post-${post.id}`,
-      type: 'post' as const,
-      title: post.caption || 'Untitled post',
-      description: `${post.departmentName || 'General'} • ${post.category || 'Uncategorized'} • ${post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf') ? 'PDF' : 'Post'}`,
-      actor: post.adminName || 'System',
-      timestamp: post.createdAt,
-      badge: post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf') ? 'PDF' : 'Content',
-      badgeClass: post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf')
-        ? (theme === 'dark' ? 'bg-orange-500/15 text-orange-200 border border-orange-500/30' : 'bg-orange-100 text-orange-700 border border-orange-200')
-        : (theme === 'dark' ? 'bg-zinc-800 text-zinc-200 border border-zinc-700' : 'bg-zinc-100 text-zinc-700 border border-zinc-200'),
-      icon: '📄',
-    }));
 
-    const eventEntries = auditEvents.map((event) => ({
-      id: `event-${event.id}`,
-      type: 'event' as const,
-      title: event.title,
-      description: event.description || `${event.departmentName || 'General'} department activity`,
-      actor: event.adminName || 'System',
-      timestamp: event.eventDate,
-      badge: event.isAnnouncement ? 'Announcement' : 'Event',
-      badgeClass: event.isAnnouncement
-        ? (theme === 'dark' ? 'bg-blue-500/15 text-blue-200 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200')
-        : (theme === 'dark' ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'),
-      icon: event.isAnnouncement ? '📣' : '🗓️',
-    }));
+    return auditLogs
+      .map((entry) => {
+        const badgeClass = entry.action === 'delete'
+          ? (theme === 'dark' ? 'bg-rose-500/15 text-rose-200 border border-rose-500/30' : 'bg-rose-100 text-rose-700 border border-rose-200')
+          : entry.action === 'update'
+            ? (theme === 'dark' ? 'bg-amber-500/15 text-amber-200 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200')
+            : (theme === 'dark' ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200');
 
-    return [...postEntries, ...eventEntries]
+        return {
+          id: `audit-${entry.id}`,
+          type: entry.resourceType,
+          title: entry.title,
+          description: `${entry.departmentName} • ${entry.description}`,
+          actor: entry.actorName || 'System',
+          timestamp: entry.createdAt,
+          badge: entry.badge,
+          badgeClass,
+          icon: entry.icon,
+        };
+      })
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       .map((entry) => ({
         ...entry,
         timeLabel: formatActivityTimestamp(entry.timestamp),
         isUpcoming: new Date(entry.timestamp).getTime() > now.getTime(),
       }));
-  }, [auditEvents, posts, theme]);
+  }, [auditLogs, theme]);
 
   const departments = useMemo(() => {
     const map = new Map<string, number>();
@@ -1601,7 +1594,7 @@ export default function DashboardPage() {
                 </div>
                 <div className={`rounded-2xl p-5 ${c.panel}`}>
                   <p className={`${c.sectionLabel} text-[11px] uppercase tracking-widest font-semibold`}>Announcements</p>
-                  <p className={`${c.heading} text-3xl font-black mt-2`}>{auditEvents.filter((event) => event.isAnnouncement).length}</p>
+                  <p className={`${c.heading} text-3xl font-black mt-2`}>{auditLogs.filter((entry) => entry.resourceType === 'event' && entry.icon === '📣').length}</p>
                   <p className={`${c.textMuted} text-sm mt-1`}>Scheduled or published announcements</p>
                 </div>
                 <div className={`rounded-2xl p-5 ${c.panel}`}>
@@ -1615,7 +1608,7 @@ export default function DashboardPage() {
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-4">
                   <div>
                     <h3 className={`${c.heading} text-xl font-black uppercase tracking-wider`}>All system activity</h3>
-                    <p className={`${c.textMuted} text-sm mt-1`}>A consolidated view of all content and announcement activity currently available in the admin dashboard.</p>
+                    <p className={`${c.textMuted} text-sm mt-1`}>A consolidated view of create, update, and delete activity across departments, including post, event, and admin changes.</p>
                   </div>
                   <div className={`${theme === 'dark' ? 'bg-[#141414] border-[#1f1f1f]' : 'bg-[#FAF5EF] border-[#E8E0D8]'} rounded-xl px-3 py-2 border text-xs ${c.textMuted}`}>
                     Showing all {auditEntries.length} items

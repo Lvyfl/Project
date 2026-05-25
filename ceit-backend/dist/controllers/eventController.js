@@ -4,6 +4,7 @@ exports.deleteEvent = exports.updateEvent = exports.getEventById = exports.getPu
 const db_1 = require("../db");
 const schema_1 = require("../db/schema");
 const drizzle_orm_1 = require("drizzle-orm");
+const auditLogger_1 = require("../utils/auditLogger");
 let eventColumnsEnsured = false;
 async function ensureEventMediaColumns() {
     if (eventColumnsEnsured)
@@ -85,6 +86,17 @@ const createEvent = async (req, res) => {
             adminId: userId,
             departmentId: departmentId,
         }).returning();
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'create',
+            resourceType: 'event',
+            resourceId: newEvent.id,
+            departmentId: newEvent.departmentId,
+            actorId: userId,
+            title: newEvent.title,
+            description: newEvent.description || 'No description',
+            category: newEvent.isAnnouncement ? 'Announcement' : 'Event',
+            imageUrl: newEvent.eventImageUrl || null,
+        });
         res.status(201).json(newEvent);
     }
     catch (error) {
@@ -264,6 +276,17 @@ const updateEvent = async (req, res) => {
             .set(updateData)
             .where((0, drizzle_orm_1.eq)(schema_1.events.id, id))
             .returning();
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'update',
+            resourceType: 'event',
+            resourceId: updatedEvent.id,
+            departmentId: updatedEvent.departmentId,
+            actorId: req.user.userId,
+            title: updatedEvent.title,
+            description: updatedEvent.description || 'No description',
+            category: updatedEvent.isAnnouncement ? 'Announcement' : 'Event',
+            imageUrl: updatedEvent.eventImageUrl || null,
+        });
         res.json(updatedEvent);
     }
     catch (error) {
@@ -285,6 +308,17 @@ const deleteEvent = async (req, res) => {
             return res.status(404).json({ error: 'Event not found or unauthorized' });
         }
         await db_1.db.delete(schema_1.events).where((0, drizzle_orm_1.eq)(schema_1.events.id, id));
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'delete',
+            resourceType: 'event',
+            resourceId: event.id,
+            departmentId: event.departmentId,
+            actorId: req.user.userId,
+            title: event.title,
+            description: event.description || 'No description',
+            category: event.isAnnouncement ? 'Announcement' : 'Event',
+            imageUrl: event.eventImageUrl || null,
+        });
         res.json({ message: 'Event deleted successfully' });
     }
     catch (error) {

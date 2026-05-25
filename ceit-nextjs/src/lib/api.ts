@@ -116,6 +116,11 @@ export const eventsAPI = {
   deleteEvent: (id: string) => api.delete(`/events/${id}`),
 };
 
+export const auditAPI = {
+  getLogs: (params?: { limit?: number; offset?: number; resourceType?: string; action?: string }) =>
+    api.get('/audit-logs', { params }),
+};
+
 export const backgroundsAPI = {
   list: () => api.get('/backgrounds'),
   getActive: () => api.get('/backgrounds/active'),

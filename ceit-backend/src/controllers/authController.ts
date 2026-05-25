@@ -4,6 +4,7 @@ import { users, departments } from '../db/schema';
 import { eq, asc } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { createAuditLogEntry } from '../utils/auditLogger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 
@@ -45,6 +46,18 @@ export const register = async (req: any, res: Response) => {
       departmentId: department.id,
       isMasterAdmin: false,
     }).returning();
+
+    await createAuditLogEntry({
+      action: 'create',
+      resourceType: 'admin',
+      resourceId: newUser.id,
+      departmentId: newUser.departmentId,
+      actorId: req.user.userId,
+      title: newUser.name,
+      description: 'Created admin account',
+      category: null,
+      imageUrl: null,
+    });
 
     res.status(201).json({ message: 'Admin registered successfully', user: { id: newUser.id, name: newUser.name, email: newUser.email, departmentId: newUser.departmentId } });
   } catch (error: any) {
@@ -88,6 +101,17 @@ export const deleteAdmin = async (req: any, res: Response) => {
       return res.status(403).json({ error: 'Cannot delete the master admin account.' });
     }
     await db.delete(users).where(eq(users.id, id));
+    await createAuditLogEntry({
+      action: 'delete',
+      resourceType: 'admin',
+      resourceId: target.id,
+      departmentId: target.departmentId,
+      actorId: req.user.userId,
+      title: target.name,
+      description: 'Deleted admin account',
+      category: null,
+      imageUrl: null,
+    });
     res.json({ message: 'Admin deleted successfully.' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -123,6 +147,17 @@ export const updateAdmin = async (req: any, res: Response) => {
     }
 
     const [updated] = await db.update(users).set(updates).where(eq(users.id, id)).returning();
+    await createAuditLogEntry({
+      action: 'update',
+      resourceType: 'admin',
+      resourceId: updated.id,
+      departmentId: updated.departmentId,
+      actorId: req.user.userId,
+      title: updated.name,
+      description: 'Updated admin account',
+      category: null,
+      imageUrl: null,
+    });
     res.json({ message: 'Admin updated successfully.', user: { id: updated.id, name: updated.name, email: updated.email, departmentId: updated.departmentId } });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

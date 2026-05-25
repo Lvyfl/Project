@@ -6,6 +6,7 @@ const schema_1 = require("../db/schema");
 const drizzle_orm_1 = require("drizzle-orm");
 const blob_1 = require("@vercel/blob");
 const publicMediaRewriter_1 = require("../utils/publicMediaRewriter");
+const auditLogger_1 = require("../utils/auditLogger");
 /** Public list payload limit per post media field (align with single-post cap so previews are not blanked). */
 const MAX_LIST_MEDIA_BYTES = 2 * 1024 * 1024;
 const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -121,6 +122,17 @@ const createPost = async (req, res) => {
             adminId: userId,
             departmentId: departmentId,
         }).returning();
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'create',
+            resourceType: 'post',
+            resourceId: newPost.id,
+            departmentId: newPost.departmentId,
+            actorId: userId,
+            title: newPost.caption,
+            description: newPost.body || 'No body text',
+            category: newPost.category || null,
+            imageUrl: newPost.imageUrl || null,
+        });
         res.status(201).json(newPost);
     }
     catch (error) {
@@ -190,23 +202,34 @@ const updatePost = async (req, res) => {
         const postScope = isMasterAdmin
             ? (0, drizzle_orm_1.eq)(schema_1.posts.id, id)
             : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId));
-        const updated = await db_1.db
+        const [existingPost] = await db_1.db
+            .select()
+            .from(schema_1.posts)
+            .where(postScope)
+            .limit(1);
+        if (!existingPost) {
+            return res.status(404).json({ error: 'Post not found or unauthorized' });
+        }
+        const [updated] = await db_1.db
             .update(schema_1.posts)
             .set({ caption, body: body !== undefined ? (body || null) : undefined, category: category !== undefined ? (category || null) : undefined, imageUrl })
             .where(postScope)
-            .returning({
-            id: schema_1.posts.id,
-            caption: schema_1.posts.caption,
-            body: schema_1.posts.body,
-            imageUrl: schema_1.posts.imageUrl,
-            createdAt: schema_1.posts.createdAt,
-            departmentId: schema_1.posts.departmentId,
-            adminId: schema_1.posts.adminId,
-        });
-        if (!updated[0]) {
+            .returning();
+        if (!updated) {
             return res.status(404).json({ error: 'Post not found or unauthorized' });
         }
-        res.json(updated[0]);
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'update',
+            resourceType: 'post',
+            resourceId: updated.id,
+            departmentId: updated.departmentId,
+            actorId: userId,
+            title: updated.caption,
+            description: updated.body || 'No body text',
+            category: updated.category || null,
+            imageUrl: updated.imageUrl || null,
+        });
+        res.json(updated);
     }
     catch (error) {
         res.status(500).json({ error: error.message });
@@ -221,7 +244,7 @@ const deletePost = async (req, res) => {
             ? (0, drizzle_orm_1.eq)(schema_1.posts.id, id)
             : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId));
         const [existing] = await db_1.db
-            .select({ imageUrl: schema_1.posts.imageUrl })
+            .select()
             .from(schema_1.posts)
             .where(postScope)
             .limit(1);
@@ -232,6 +255,17 @@ const deletePost = async (req, res) => {
         await db_1.db
             .delete(schema_1.posts)
             .where(postScope);
+        await (0, auditLogger_1.createAuditLogEntry)({
+            action: 'delete',
+            resourceType: 'post',
+            resourceId: existing.id,
+            departmentId: existing.departmentId,
+            actorId: userId,
+            title: existing.caption,
+            description: existing.body || 'No body text',
+            category: existing.category || null,
+            imageUrl: existing.imageUrl || null,
+        });
         res.json({ message: 'Post deleted successfully' });
     }
     catch (error) {
