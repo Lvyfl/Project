@@ -35,6 +35,7 @@ function extFromMime(mime) {
         return 'gif';
     return 'bin';
 }
+/** Post `imageUrl` for DB-stored PDFs: `{origin}/documents/{id}|{thumbUrl}` */
 const PDF_DOC_ID_IN_PATH = /\/documents\/([^/?#]+)/i;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function extractPdfDocumentIdFromImageUrl(imageUrl) {
@@ -42,12 +43,12 @@ function extractPdfDocumentIdFromImageUrl(imageUrl) {
         return null;
     const beforeThumb = imageUrl.includes('|') ? imageUrl.split('|')[0] : imageUrl;
     const m = PDF_DOC_ID_IN_PATH.exec(beforeThumb);
-    if (!(m === null || m === void 0 ? void 0 : m[1]))
+    if (!m?.[1])
         return null;
     try {
         return decodeURIComponent(m[1].trim());
     }
-    catch (_a) {
+    catch {
         return m[1].trim();
     }
 }
@@ -174,7 +175,7 @@ const updatePost = async (req, res) => {
         const { id } = req.params;
         const { caption, body, category } = req.body;
         let imageUrl = req.body?.imageUrl;
-        const { userId, departmentId } = req.user;
+        const { userId, departmentId, isMasterAdmin } = req.user;
         if (typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
             const parsed = parseDataUrl(imageUrl);
             if (!parsed || !parsed.mime.startsWith('image/')) {
@@ -186,10 +187,13 @@ const updatePost = async (req, res) => {
             const ext = extFromMime(parsed.mime);
             imageUrl = await uploadImageBlob(parsed.buffer, ext);
         }
+        const postScope = isMasterAdmin
+            ? (0, drizzle_orm_1.eq)(schema_1.posts.id, id)
+            : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId));
         const updated = await db_1.db
             .update(schema_1.posts)
             .set({ caption, body: body !== undefined ? (body || null) : undefined, category: category !== undefined ? (category || null) : undefined, imageUrl })
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId)))
+            .where(postScope)
             .returning({
             id: schema_1.posts.id,
             caption: schema_1.posts.caption,
@@ -212,11 +216,14 @@ exports.updatePost = updatePost;
 const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
-        const { userId, departmentId } = req.user;
+        const { userId, departmentId, isMasterAdmin } = req.user;
+        const postScope = isMasterAdmin
+            ? (0, drizzle_orm_1.eq)(schema_1.posts.id, id)
+            : (0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId));
         const [existing] = await db_1.db
             .select({ imageUrl: schema_1.posts.imageUrl })
             .from(schema_1.posts)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId)))
+            .where(postScope)
             .limit(1);
         if (!existing) {
             return res.status(404).json({ error: 'Post not found or unauthorized' });
@@ -224,7 +231,7 @@ const deletePost = async (req, res) => {
         await deletePdfDocumentRowIfPresent(existing.imageUrl);
         await db_1.db
             .delete(schema_1.posts)
-            .where((0, drizzle_orm_1.and)((0, drizzle_orm_1.eq)(schema_1.posts.id, id), (0, drizzle_orm_1.eq)(schema_1.posts.adminId, userId), (0, drizzle_orm_1.eq)(schema_1.posts.departmentId, departmentId)));
+            .where(postScope);
         res.json({ message: 'Post deleted successfully' });
     }
     catch (error) {

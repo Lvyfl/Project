@@ -176,7 +176,7 @@ export const updatePost = async (req: any, res: Response) => {
 		const { id } = req.params;
 		const { caption, body, category } = req.body;
 		let imageUrl: string | undefined = req.body?.imageUrl;
-		const { userId, departmentId } = req.user;
+		const { userId, departmentId, isMasterAdmin } = req.user;
 
 		if (typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
 			const parsed = parseDataUrl(imageUrl);
@@ -190,16 +190,14 @@ export const updatePost = async (req: any, res: Response) => {
 			imageUrl = await uploadImageBlob(parsed.buffer, ext);
 		}
 
+		const postScope = isMasterAdmin
+			? eq(posts.id, id)
+			: and(eq(posts.id, id), eq(posts.adminId, userId), eq(posts.departmentId, departmentId));
+
 		const updated = await db
 			.update(posts)
 			.set({ caption, body: body !== undefined ? (body || null) : undefined, category: category !== undefined ? (category || null) : undefined, imageUrl })
-			.where(
-				and(
-					eq(posts.id, id),
-					eq(posts.adminId, userId),
-					eq(posts.departmentId, departmentId)
-				)
-			)
+			.where(postScope)
 			.returning({
 				id: posts.id,
 				caption: posts.caption,
@@ -223,18 +221,15 @@ export const updatePost = async (req: any, res: Response) => {
 export const deletePost = async (req: any, res: Response) => {
 	try {
 		const { id } = req.params;
-		const { userId, departmentId } = req.user;
+		const { userId, departmentId, isMasterAdmin } = req.user;
+		const postScope = isMasterAdmin
+			? eq(posts.id, id)
+			: and(eq(posts.id, id), eq(posts.adminId, userId), eq(posts.departmentId, departmentId));
 
 		const [existing] = await db
 			.select({ imageUrl: posts.imageUrl })
 			.from(posts)
-			.where(
-				and(
-					eq(posts.id, id),
-					eq(posts.adminId, userId),
-					eq(posts.departmentId, departmentId)
-				)
-			)
+			.where(postScope)
 			.limit(1);
 
 		if (!existing) {
@@ -245,13 +240,7 @@ export const deletePost = async (req: any, res: Response) => {
 
 		await db
 			.delete(posts)
-			.where(
-				and(
-					eq(posts.id, id),
-					eq(posts.adminId, userId),
-					eq(posts.departmentId, departmentId)
-				)
-			);
+			.where(postScope);
 
 		res.json({ message: 'Post deleted successfully' });
 	} catch (error: any) {

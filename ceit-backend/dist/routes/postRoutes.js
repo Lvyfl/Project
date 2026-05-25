@@ -37,6 +37,7 @@ router.post('/upload', upload.fields([
     { name: 'thumbnailFile', maxCount: 1 },
 ]), async (req, res) => {
     try {
+        // Title → posts.caption; optional description → posts.body (legacy: single `caption` field treated as title)
         const title = String(req.body?.title ?? '').trim();
         const legacyCaption = String(req.body?.caption ?? '').trim();
         const captionForDb = title || legacyCaption;
