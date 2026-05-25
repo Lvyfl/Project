@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -291,6 +291,39 @@ export default function DashboardPage() {
     photoDataUrl: '',
   });
 
+  const fetchPosts = useCallback(async () => {
+    try {
+      const PAGE_SIZE = 30;
+      const allPosts: PostItem[] = [];
+
+      let offset = 0;
+      while (true) {
+        const response = user?.isMasterAdmin
+          ? await postsAPI.getPosts({ limit: PAGE_SIZE, offset })
+          : await postsAPI.getDepartmentPosts({ limit: PAGE_SIZE, offset });
+
+        const pagePosts = normalizePosts(response.data);
+        if (pagePosts.length === 0) {
+          break;
+        }
+
+        allPosts.push(...pagePosts);
+
+        if (pagePosts.length < PAGE_SIZE) {
+          break;
+        }
+
+        offset += PAGE_SIZE;
+      }
+
+      setPosts(allPosts);
+    } catch (err) {
+      console.error('Failed to fetch posts', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.isMasterAdmin]);
+
   useEffect(() => {
     if (!isAuthenticated) {
       router.push('/login');
@@ -300,7 +333,7 @@ export default function DashboardPage() {
         postsAPI.getEngagement().then(r => setEngagement(r.data)).catch(() => {});
       }
     }
-  }, [isAuthenticated, router]);
+  }, [fetchPosts, isAuthenticated, router, user?.isMasterAdmin]);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -308,14 +341,7 @@ export default function DashboardPage() {
     let isMounted = true;
     const loadAuditEvents = async () => {
       try {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 2);
-
         const response = await eventsAPI.getEvents({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
           allDepartments: true,
         });
 
@@ -425,24 +451,6 @@ export default function DashboardPage() {
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [isPostsFlyoutOpen, activeTab]);
-
-  const fetchPosts = async () => {
-    try {
-      let response;
-      try {
-        response = await postsAPI.getDepartmentPosts({ limit: 20, offset: 0 });
-      } catch {
-        response = await postsAPI.getPosts({ limit: 20, offset: 0 });
-      }
-
-      const basePosts = normalizePosts(response.data);
-      setPosts(basePosts);
-    } catch (err) {
-      console.error('Failed to fetch posts', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     setLoggingOut(true);
@@ -683,7 +691,7 @@ export default function DashboardPage() {
 
   const editPost = (post: PostItem) => {
     if (updatingPostId || deletingPostId) return;
-    const canManage = post.adminId === user?.id && post.departmentId === user?.departmentId;
+    const canManage = user?.isMasterAdmin || (post.adminId === user?.id && post.departmentId === user?.departmentId);
     if (!canManage) {
       setPostActionMessage({
         title: 'Edit not allowed',
@@ -748,7 +756,7 @@ export default function DashboardPage() {
     if (updatingPostId || deletingPostId) return;
 
     const targetPost = posts.find((item) => item.id === postId);
-    const canManage = !!targetPost && targetPost.adminId === user?.id && targetPost.departmentId === user?.departmentId;
+    const canManage = !!targetPost && (user?.isMasterAdmin || (targetPost.adminId === user?.id && targetPost.departmentId === user?.departmentId));
     if (!canManage) {
       setPostActionMessage({
         title: 'Delete not allowed',
@@ -843,7 +851,6 @@ export default function DashboardPage() {
 
     return [...postEntries, ...eventEntries]
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 50)
       .map((entry) => ({
         ...entry,
         timeLabel: formatActivityTimestamp(entry.timestamp),
@@ -1383,7 +1390,7 @@ export default function DashboardPage() {
                       const isExpanded = expandedPosts.has(post.id);
                       const postViewCount = viewMap[post.id] ?? 0;
                       const hasAttachment = !!post.imageUrl;
-                      const canManagePost = post.adminId === user?.id && post.departmentId === user?.departmentId;
+                      const canManagePost = user?.isMasterAdmin || (post.adminId === user?.id && post.departmentId === user?.departmentId);
                       const postDate = new Date(post.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
                       return (
@@ -1607,11 +1614,11 @@ export default function DashboardPage() {
               <div className={`rounded-2xl p-6 ${c.panel}`}>
                 <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-4">
                   <div>
-                    <h3 className={`${c.heading} text-xl font-black uppercase tracking-wider`}>Recent system activity</h3>
-                    <p className={`${c.textMuted} text-sm mt-1`}>A consolidated view of changes made through content and announcement actions.</p>
+                    <h3 className={`${c.heading} text-xl font-black uppercase tracking-wider`}>All system activity</h3>
+                    <p className={`${c.textMuted} text-sm mt-1`}>A consolidated view of all content and announcement activity currently available in the admin dashboard.</p>
                   </div>
                   <div className={`${theme === 'dark' ? 'bg-[#141414] border-[#1f1f1f]' : 'bg-[#FAF5EF] border-[#E8E0D8]'} rounded-xl px-3 py-2 border text-xs ${c.textMuted}`}>
-                    Showing the latest {auditEntries.length} items
+                    Showing all {auditEntries.length} items
                   </div>
                 </div>
 
