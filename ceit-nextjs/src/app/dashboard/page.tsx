@@ -5,7 +5,7 @@ import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { postsAPI } from '@/lib/api';
+import { eventsAPI, postsAPI } from '@/lib/api';
 import CalendarSection from './CalendarSection';
 import UploadPdfSection from './UploadPdfSection';
 import UploadBackgroundSection from './UploadBackgroundSection';
@@ -51,6 +51,18 @@ function getFirstName(name?: string) {
   if (!name) return 'User';
   const first = name.trim().split(' ')[0];
   return first || 'User';
+}
+
+function formatActivityTimestamp(dateStr: string) {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+
+  const now = new Date();
+  if (date.getTime() > now.getTime()) {
+    return `Upcoming · ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  }
+
+  return timeAgo(dateStr);
 }
 
 function parsePostImageUrls(imageUrl?: string | null): string[] {
@@ -222,6 +234,15 @@ export default function DashboardPage() {
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [auditEvents, setAuditEvents] = useState<Array<{
+    id: string;
+    title: string;
+    description?: string;
+    eventDate: string;
+    isAnnouncement?: boolean;
+    adminName?: string;
+    departmentName?: string;
+  }>>([]);
   const [postsScrollProgress, setPostsScrollProgress] = useState(0);
   const [isPostsFeedScrollable, setIsPostsFeedScrollable] = useState(true);
   const [isPostsFlyoutOpen, setIsPostsFlyoutOpen] = useState(false);
@@ -280,6 +301,39 @@ export default function DashboardPage() {
       }
     }
   }, [isAuthenticated, router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    let isMounted = true;
+    const loadAuditEvents = async () => {
+      try {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 2);
+
+        const response = await eventsAPI.getEvents({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          allDepartments: true,
+        });
+
+        if (!isMounted) return;
+        setAuditEvents(Array.isArray(response.data) ? response.data : []);
+      } catch {
+        if (isMounted) {
+          setAuditEvents([]);
+        }
+      }
+    };
+
+    loadAuditEvents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
 
   useEffect(() => {
     return () => {
@@ -757,6 +811,46 @@ export default function DashboardPage() {
     };
   }, [posts]);
 
+  const auditEntries = useMemo(() => {
+    const now = new Date();
+    const postEntries = posts.map((post) => ({
+      id: `post-${post.id}`,
+      type: 'post' as const,
+      title: post.caption || 'Untitled post',
+      description: `${post.departmentName || 'General'} • ${post.category || 'Uncategorized'} • ${post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf') ? 'PDF' : 'Post'}`,
+      actor: post.adminName || 'System',
+      timestamp: post.createdAt,
+      badge: post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf') ? 'PDF' : 'Content',
+      badgeClass: post.imageUrl?.includes('|') || post.imageUrl?.startsWith('data:application/pdf')
+        ? (theme === 'dark' ? 'bg-orange-500/15 text-orange-200 border border-orange-500/30' : 'bg-orange-100 text-orange-700 border border-orange-200')
+        : (theme === 'dark' ? 'bg-zinc-800 text-zinc-200 border border-zinc-700' : 'bg-zinc-100 text-zinc-700 border border-zinc-200'),
+      icon: '📄',
+    }));
+
+    const eventEntries = auditEvents.map((event) => ({
+      id: `event-${event.id}`,
+      type: 'event' as const,
+      title: event.title,
+      description: event.description || `${event.departmentName || 'General'} department activity`,
+      actor: event.adminName || 'System',
+      timestamp: event.eventDate,
+      badge: event.isAnnouncement ? 'Announcement' : 'Event',
+      badgeClass: event.isAnnouncement
+        ? (theme === 'dark' ? 'bg-blue-500/15 text-blue-200 border border-blue-500/30' : 'bg-blue-100 text-blue-700 border border-blue-200')
+        : (theme === 'dark' ? 'bg-emerald-500/15 text-emerald-200 border border-emerald-500/30' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'),
+      icon: event.isAnnouncement ? '📣' : '🗓️',
+    }));
+
+    return [...postEntries, ...eventEntries]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 50)
+      .map((entry) => ({
+        ...entry,
+        timeLabel: formatActivityTimestamp(entry.timestamp),
+        isUpcoming: new Date(entry.timestamp).getTime() > now.getTime(),
+      }));
+  }, [auditEvents, posts, theme]);
+
   const departments = useMemo(() => {
     const map = new Map<string, number>();
     // Seed all known departments with 0 so they always appear
@@ -826,6 +920,14 @@ export default function DashboardPage() {
               badge: stats.total,
               icon: (
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20v-8H7v8M7 4v4h8"/></svg>
+              ),
+            },
+            {
+              key: 'auditLogs',
+              label: 'Audit logs',
+              badge: auditEntries.length,
+              icon: (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9h.01"/></svg>
               ),
             },
             {
@@ -909,6 +1011,7 @@ export default function DashboardPage() {
               <h2 className={`text-2xl font-bold ${c.heading}`}>
                 {activeTab === 'overview' && 'Overview'}
                 {activeTab === 'posts' && 'Posts'}
+                {activeTab === 'auditLogs' && 'Audit logs'}
                 {activeTab === 'announcements' && 'Announcements'}
                 {activeTab === 'uploadPdf' && 'Upload PDF'}
                 {activeTab === 'backgrounds' && 'Viewer Backgrounds'}
@@ -918,6 +1021,7 @@ export default function DashboardPage() {
               <p className={`${c.textMuted} text-sm mt-0.5`}>
                 {activeTab === 'overview' && 'Dashboard metrics at a glance'}
                 {activeTab === 'posts' && `${filteredPosts.length} post${filteredPosts.length !== 1 ? 's' : ''} ${searchQuery || categoryFilter ? 'found' : 'total'}`}
+                {activeTab === 'auditLogs' && 'Track published content and scheduled announcements'}
                 {activeTab === 'announcements' && 'Manage events and calendar'}
                 {activeTab === 'uploadPdf' && 'Upload and manage PDF documents'}
                 {activeTab === 'backgrounds' && 'Manage the viewer page background image'}
@@ -926,7 +1030,7 @@ export default function DashboardPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {activeTab !== 'announcements' && activeTab !== 'uploadPdf' && activeTab !== 'backgrounds' && activeTab !== 'music' && (
+              {activeTab !== 'announcements' && activeTab !== 'uploadPdf' && activeTab !== 'backgrounds' && activeTab !== 'music' && activeTab !== 'auditLogs' && (
                 <button
                   onClick={() => { openCreatePostModal(); }}
                   className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all ${c.primaryBtn} flex items-center gap-2`}
@@ -1470,6 +1574,78 @@ export default function DashboardPage() {
                     />
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'auditLogs' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className={`rounded-2xl p-5 ${c.panel}`}>
+                  <p className={`${c.sectionLabel} text-[11px] uppercase tracking-widest font-semibold`}>Audit entries</p>
+                  <p className={`${c.heading} text-3xl font-black mt-2`}>{auditEntries.length}</p>
+                  <p className={`${c.textMuted} text-sm mt-1`}>Recent content and announcements</p>
+                </div>
+                <div className={`rounded-2xl p-5 ${c.panel}`}>
+                  <p className={`${c.sectionLabel} text-[11px] uppercase tracking-widest font-semibold`}>Published posts</p>
+                  <p className={`${c.heading} text-3xl font-black mt-2`}>{posts.length}</p>
+                  <p className={`${c.textMuted} text-sm mt-1`}>Tracked from the current department feed</p>
+                </div>
+                <div className={`rounded-2xl p-5 ${c.panel}`}>
+                  <p className={`${c.sectionLabel} text-[11px] uppercase tracking-widest font-semibold`}>Announcements</p>
+                  <p className={`${c.heading} text-3xl font-black mt-2`}>{auditEvents.filter((event) => event.isAnnouncement).length}</p>
+                  <p className={`${c.textMuted} text-sm mt-1`}>Scheduled or published announcements</p>
+                </div>
+                <div className={`rounded-2xl p-5 ${c.panel}`}>
+                  <p className={`${c.sectionLabel} text-[11px] uppercase tracking-widest font-semibold`}>Departments</p>
+                  <p className={`${c.heading} text-3xl font-black mt-2`}>{new Set(posts.map((post) => post.departmentName || 'General')).size}</p>
+                  <p className={`${c.textMuted} text-sm mt-1`}>Observed from current content activity</p>
+                </div>
+              </div>
+
+              <div className={`rounded-2xl p-6 ${c.panel}`}>
+                <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between mb-4">
+                  <div>
+                    <h3 className={`${c.heading} text-xl font-black uppercase tracking-wider`}>Recent system activity</h3>
+                    <p className={`${c.textMuted} text-sm mt-1`}>A consolidated view of changes made through content and announcement actions.</p>
+                  </div>
+                  <div className={`${theme === 'dark' ? 'bg-[#141414] border-[#1f1f1f]' : 'bg-[#FAF5EF] border-[#E8E0D8]'} rounded-xl px-3 py-2 border text-xs ${c.textMuted}`}>
+                    Showing the latest {auditEntries.length} items
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {auditEntries.length === 0 && (
+                    <div className={`rounded-xl border border-dashed px-4 py-10 text-center ${theme === 'dark' ? 'border-[#1f1f1f] bg-[#141414]' : 'border-[#E8E0D8] bg-white'}`}>
+                      <p className={`${c.heading} font-semibold`}>No audit activity found yet</p>
+                      <p className={`${c.textMuted} text-sm mt-1`}>Create a post or schedule an announcement to populate this view.</p>
+                    </div>
+                  )}
+
+                  {auditEntries.map((entry) => (
+                    <div key={entry.id} className={`rounded-2xl p-4 border ${theme === 'dark' ? 'border-[#1f1f1f] bg-[#141414]' : 'border-[#E8E0D8] bg-white'} flex flex-col gap-3 md:flex-row md:items-start md:justify-between`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg ${entry.type === 'event' ? (theme === 'dark' ? 'bg-blue-500/15 text-blue-200' : 'bg-blue-100 text-blue-700') : (theme === 'dark' ? 'bg-orange-500/15 text-orange-200' : 'bg-orange-100 text-orange-700')}`}>
+                          {entry.icon}
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className={`${c.heading} font-semibold`}>{entry.title}</p>
+                            <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${entry.badgeClass}`}>{entry.badge}</span>
+                          </div>
+                          <p className={`${c.textMuted} text-sm mt-1`}>{entry.description}</p>
+                          <p className={`${c.textMuted} text-xs mt-2`}>{entry.actor} • {entry.timeLabel}</p>
+                        </div>
+                      </div>
+                      <div className={`rounded-xl px-3 py-1.5 text-[11px] font-semibold ${entry.isUpcoming
+                        ? (theme === 'dark' ? 'bg-amber-500/15 text-amber-200 border border-amber-500/30' : 'bg-amber-100 text-amber-700 border border-amber-200')
+                        : (theme === 'dark' ? 'bg-[#0D0D0D] text-[#8B8078] border border-[#1f1f1f]' : 'bg-[#FAF5EF] text-[#7A6E64] border border-[#E8E0D8]')
+                      }`}>
+                        {entry.isUpcoming ? 'Upcoming' : 'Completed'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           )}
