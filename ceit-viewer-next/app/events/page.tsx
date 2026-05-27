@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { getApiBase } from '@/lib/utils';
+import { phToday, phDateKey } from '@/lib/phTime';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -25,7 +26,7 @@ export default function EventsPage() {
   const pathname = usePathname();
   const [theme, setTheme] = useState<ThemeMode>('dark');
   const d = theme === 'dark';
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => phToday());
   const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
   const [upcomingSourceEvents, setUpcomingSourceEvents] = useState<CalendarEvent[]>([]);
   const [selectedDateKey, setSelectedDateKey] = useState('');
@@ -76,8 +77,7 @@ export default function EventsPage() {
 
   const loadUpcomingEvents = useCallback(async () => {
     try {
-      const startDate = new Date();
-      startDate.setHours(0, 0, 0, 0);
+      const startDate = phToday();
       const endDate = new Date(startDate);
       endDate.setMonth(endDate.getMonth() + 2);
       endDate.setHours(23, 59, 59, 999);
@@ -260,7 +260,7 @@ export default function EventsPage() {
                   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                   const key = date.toDateString();
                   const count = eventsByDate.get(key) || 0;
-                  const isToday = key === new Date().toDateString();
+                  const isToday = phDateKey(date) === phDateKey();
                   const isSelected = key === selectedDateKey;
 
                   return (

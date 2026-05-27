@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { getApiBase, resolveApiMediaUrl } from '@/lib/utils';
+import { phToday, phYMD } from '@/lib/phTime';
 
 /* ─────────────────────────── types ─────────────────────────── */
 type Post = {
@@ -856,7 +857,7 @@ function MiniCalendar({ events, accent, surface, surface2, border, txt, muted, d
   events: CalendarEvent[];
   accent: string; surface: string; surface2: string; border: string; txt: string; muted: string; dark: boolean;
 }) {
-  const today = new Date();
+  const today = phToday();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-based
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -973,7 +974,8 @@ function MiniCalendar({ events, accent, surface, surface2, border, txt, muted, d
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.4vh', flexShrink: 0 }}>
         {cells.map((day, idx) => {
           if (!day) return <div key={`empty-${idx}`} />;
-          const isToday = day === today.getDate() && viewMonth === today.getMonth() && viewYear === today.getFullYear();
+          const phNow = phYMD();
+          const isToday = day === phNow.day && viewMonth === phNow.month && viewYear === phNow.year;
           const hasEvent = !!dayEventMap[day];
           const isSelected = day === selectedDay;
           return (

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { eventsAPI } from '@/lib/api';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { phToday, phTimeString } from '@/lib/phTime';
 
 interface CalendarEvent {
   id: string;
@@ -80,11 +81,9 @@ export default function CalendarSection() {
 
   const [showAllAnnouncements, setShowAllAnnouncements] = useState(false);
 
-  const today = useMemo(() => {
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return t;
-  }, []);
+  // PH-anchored "today" so the highlighted cell reflects Asia/Manila regardless
+  // of where the admin's browser/host machine is configured.
+  const today = useMemo(() => phToday(), []);
 
   const minStartDateTimeLocal = useMemo(() => {
     const min = new Date(today);
@@ -376,8 +375,7 @@ export default function CalendarSection() {
   const isToday = (date: Date) => date.toDateString() === today.toDateString();
   const hasEvents = (date: Date) => eventsByDate.has(date.toDateString());
 
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
+  const timeStr = phTimeString();
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -435,7 +433,9 @@ export default function CalendarSection() {
                   ${!item.isCurrentMonth
                     ? d ? 'text-gray-600' : 'text-gray-300'
                     : isToday(item.date)
-                      ? 'bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/30 cursor-pointer'
+                      ? d
+                        ? 'bg-orange-500 text-white font-bold shadow-lg shadow-orange-500/40 ring-2 ring-orange-300/60 cursor-pointer'
+                        : 'bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/40 ring-2 ring-orange-700 cursor-pointer'
                       : dayEvents.length > 0
                         ? d ? 'text-gray-200 hover:bg-white/10 cursor-pointer' : 'text-gray-700 hover:bg-orange-100 cursor-pointer'
                         : d ? 'text-gray-200' : 'text-gray-700'

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import PdfThumbnail from '@/app/documents/PdfThumbnail';
 import { getApiBase, resolveApiMediaUrl } from '@/lib/utils';
+import { phToday, phDateKey } from '@/lib/phTime';
 
 type ThemeMode = 'dark' | 'light';
 
@@ -120,7 +121,7 @@ export default function ViewerPage() {
   const [error, setError] = useState('');
   const [currentFilter, setCurrentFilter] = useState('');
   const [showFilter, setShowFilter] = useState(false);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => phToday());
   const [monthEvents, setMonthEvents] = useState<CalendarEvent[]>([]);
   const [upcomingSourceEvents, setUpcomingSourceEvents] = useState<CalendarEvent[]>([]);
   const [selectedDateKey, setSelectedDateKey] = useState('');
@@ -218,9 +219,8 @@ export default function ViewerPage() {
     try {
       const monthStart = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
       const monthEnd   = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0, 23, 59, 59);
-      // Upcoming window: today → +2 months (for sidebar/announcements)
-      const upcomingStart = new Date();
-      upcomingStart.setHours(0, 0, 0, 0);
+      // Upcoming window: today → +2 months (for sidebar/announcements). PH-anchored.
+      const upcomingStart = phToday();
       const upcomingEnd = new Date(upcomingStart);
       upcomingEnd.setMonth(upcomingEnd.getMonth() + 2);
       upcomingEnd.setHours(23, 59, 59, 999);
@@ -805,7 +805,7 @@ export default function ViewerPage() {
                   const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
                   const key = date.toDateString();
                   const count = eventsByDate.get(key) || 0;
-                  const isToday = key === new Date().toDateString();
+                  const isToday = phDateKey(date) === phDateKey();
                   const isSelected = key === selectedDateKey;
                   return (
                     <button key={day} type="button" onClick={() => setSelectedDateKey(count > 0 ? key : '')}
